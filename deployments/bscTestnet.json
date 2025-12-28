@@ -1,0 +1,14 @@
+{
+  "network": "bscTestnet",
+  "chainId": 97,
+  "deployer": "0xbe4aE94cb80780917132c4779d8bEa4E6804d792",
+  "deployTime": "2025-12-27T02:41:01.887Z",
+  "startTime": 1766803356,
+  "startTimeReadable": "2025-12-27T02:42:36.000Z",
+  "contracts": {
+    "rewardToken": "0x57E9cBF035776321F2A0d4AE74785FB56bD48e1B",
+    "lpToken": "0xf7839D5B542b6d278d42f61eeB5ca61127C2e652",
+    "lpMining": "0x97060F561D1890bFAc0714B373123448486F13f8",
+    "tokenMining": "0x01e2F695b7fF307A07bD20F29Bc08f565dF2199A"
+  }
+}
