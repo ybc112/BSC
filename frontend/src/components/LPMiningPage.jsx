@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
-import { FiTrendingUp, FiClock, FiUsers, FiGift, FiInfo, FiChevronDown, FiChevronUp, FiPercent, FiLayers, FiZap } from 'react-icons/fi';
-import { formatNumber, CONTRACTS } from '../utils/constants';
+import { FiTrendingUp, FiClock, FiUsers, FiGift, FiInfo, FiChevronDown, FiChevronUp, FiPercent, FiLayers, FiZap, FiLock, FiSettings, FiAlertTriangle } from 'react-icons/fi';
+import { formatNumber, CONTRACTS, parseContractError } from '../utils/constants';
 
 export default function LPMiningPage({
   account,
@@ -20,10 +20,35 @@ export default function LPMiningPage({
   const [isClaiming, setIsClaiming] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
-  const { userInfo, miningStatus, pendingReward, teamConfig } = lpMiningData || {};
+  // 管理员配置状态
+  const [adminConfig, setAdminConfig] = useState({
+    lockDays: '',
+    totalRewards: '',
+    miningYears: '',
+    userShare: '',
+    splitShare: '',
+    ref1: '',
+    ref2: '',
+    ref3: '',
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const { userInfo, miningStatus, pendingReward, teamConfig, contractConfig, lockStatus, isOwner } = lpMiningData || {};
 
   const needsApproval = parseFloat(lpAllowance) < parseFloat(depositAmount || '0');
+
+  // 格式化锁仓剩余时间
+  const formatLockTime = (seconds) => {
+    if (!seconds || seconds <= 0) return '已解锁';
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    if (days > 0) return `${days}天 ${hours}小时`;
+    if (hours > 0) return `${hours}小时 ${mins}分钟`;
+    return `${mins}分钟`;
+  };
 
   // 授权
   const handleApprove = async () => {
@@ -36,7 +61,7 @@ export default function LPMiningPage({
       toast.success('授权成功', { id: 'approve' });
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '授权失败', { id: 'approve' });
+      toast.error(parseContractError(err), { id: 'approve' });
     } finally {
       setIsApproving(false);
     }
@@ -55,7 +80,7 @@ export default function LPMiningPage({
       setDepositAmount('');
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '质押失败', { id: 'deposit' });
+      toast.error(parseContractError(err), { id: 'deposit' });
     } finally {
       setIsDepositing(false);
     }
@@ -74,7 +99,7 @@ export default function LPMiningPage({
       setWithdrawAmount('');
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '解押失败', { id: 'withdraw' });
+      toast.error(parseContractError(err), { id: 'withdraw' });
     } finally {
       setIsWithdrawing(false);
     }
@@ -91,9 +116,89 @@ export default function LPMiningPage({
       toast.success('领取成功', { id: 'claim' });
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '领取失败', { id: 'claim' });
+      toast.error(parseContractError(err), { id: 'claim' });
     } finally {
       setIsClaiming(false);
+    }
+  };
+
+  // 管理员：设置锁仓天数
+  const handleSetLockDuration = async () => {
+    if (!contracts?.lpMining || !adminConfig.lockDays) return;
+    setIsUpdating(true);
+    try {
+      const duration = parseInt(adminConfig.lockDays) * 86400;
+      const tx = await contracts.lpMining.setLockDuration(duration);
+      toast.loading('设置中...', { id: 'setLock' });
+      await tx.wait();
+      toast.success('锁仓天数已更新', { id: 'setLock' });
+      setAdminConfig(prev => ({ ...prev, lockDays: '' }));
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err.reason || '设置失败', { id: 'setLock' });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // 管理员：设置挖矿参数
+  const handleSetMiningParams = async () => {
+    if (!contracts?.lpMining || !adminConfig.totalRewards || !adminConfig.miningYears) return;
+    setIsUpdating(true);
+    try {
+      const totalRewards = ethers.parseEther(adminConfig.totalRewards);
+      const duration = parseFloat(adminConfig.miningYears) * 365 * 86400;
+      const tx = await contracts.lpMining.setMiningParams(totalRewards, BigInt(Math.floor(duration)));
+      toast.loading('设置中...', { id: 'setMining' });
+      await tx.wait();
+      toast.success('挖矿参数已更新', { id: 'setMining' });
+      setAdminConfig(prev => ({ ...prev, totalRewards: '', miningYears: '' }));
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err.reason || '设置失败', { id: 'setMining' });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // 管理员：设置分配比例
+  const handleSetDistributionRates = async () => {
+    if (!contracts?.lpMining || !adminConfig.userShare || !adminConfig.splitShare) return;
+    setIsUpdating(true);
+    try {
+      const userShare = parseInt(adminConfig.userShare) * 100;
+      const splitShare = parseInt(adminConfig.splitShare) * 100;
+      const tx = await contracts.lpMining.setDistributionRates(userShare, splitShare);
+      toast.loading('设置中...', { id: 'setDist' });
+      await tx.wait();
+      toast.success('分配比例已更新', { id: 'setDist' });
+      setAdminConfig(prev => ({ ...prev, userShare: '', splitShare: '' }));
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err.reason || '设置失败', { id: 'setDist' });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // 管理员：设置推荐比例
+  const handleSetReferralRates = async () => {
+    if (!contracts?.lpMining || !adminConfig.ref1 || !adminConfig.ref2 || !adminConfig.ref3) return;
+    setIsUpdating(true);
+    try {
+      const ref1 = parseInt(adminConfig.ref1) * 100;
+      const ref2 = parseInt(adminConfig.ref2) * 100;
+      const ref3 = parseInt(adminConfig.ref3) * 100;
+      const tx = await contracts.lpMining.setReferralRates(ref1, ref2, ref3);
+      toast.loading('设置中...', { id: 'setRef' });
+      await tx.wait();
+      toast.success('推荐比例已更新', { id: 'setRef' });
+      setAdminConfig(prev => ({ ...prev, ref1: '', ref2: '', ref3: '' }));
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err.reason || '设置失败', { id: 'setRef' });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -108,8 +213,9 @@ export default function LPMiningPage({
   };
 
   // 计算进度
+  const totalRewardsNum = contractConfig?.totalRewards ? parseFloat(contractConfig.totalRewards) : 60000000;
   const progress = miningStatus
-    ? (parseFloat(miningStatus.totalDistributed) / 60000000) * 100
+    ? (parseFloat(miningStatus.totalDistributed) / totalRewardsNum) * 100
     : 0;
 
   return (
@@ -125,11 +231,34 @@ export default function LPMiningPage({
             <p className="text-white/50">质押 LP 代币，赚取挖矿奖励</p>
           </div>
         </div>
-        <div className="badge-glow">
-          <FiPercent className="w-4 h-4 mr-2" />
-          用户收益 65%
+        <div className="flex items-center gap-3">
+          <div className="badge-glow">
+            <FiPercent className="w-4 h-4 mr-2" />
+            用户收益 {contractConfig?.userBaseShare || 65}%
+          </div>
+          <div className="badge-glow" style={{ background: 'linear-gradient(135deg, rgba(255,184,0,0.2) 0%, rgba(255,138,0,0.2) 100%)', borderColor: 'rgba(255,184,0,0.3)' }}>
+            <FiLock className="w-4 h-4 mr-2 text-[#FFB800]" />
+            <span className="text-[#FFB800]">锁仓 {contractConfig?.lockDurationDays || 30} 天</span>
+          </div>
         </div>
       </div>
+
+      {/* 锁仓状态提示 */}
+      {lockStatus?.isLocked && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-xl bg-[#FFB800]/10 border border-[#FFB800]/30 flex items-center gap-3"
+        >
+          <FiLock className="w-5 h-5 text-[#FFB800]" />
+          <div>
+            <span className="text-[#FFB800] font-medium">锁仓中</span>
+            <span className="text-white/60 ml-2">
+              剩余时间：{formatLockTime(lockStatus.remainingTime)}
+            </span>
+          </div>
+        </motion.div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -174,7 +303,7 @@ export default function LPMiningPage({
         </div>
         <div className="flex justify-between text-xs text-white/40 mt-2">
           <span>0</span>
-          <span>6000 万 RWT</span>
+          <span>{formatNumber(totalRewardsNum)} RWT</span>
         </div>
       </div>
 
@@ -244,6 +373,22 @@ export default function LPMiningPage({
               </motion.button>
             )}
 
+            {/* Lock Reset Warning */}
+            {parseFloat(userInfo?.stakedAmount || '0') > 0 && lockStatus?.isLocked && (
+              <div className="mt-4 p-3 rounded-xl bg-[#FFB800]/10 border border-[#FFB800]/30">
+                <div className="flex gap-2">
+                  <FiAlertTriangle className="text-[#FFB800] mt-0.5 flex-shrink-0 w-4 h-4" />
+                  <div className="text-xs">
+                    <p className="text-[#FFB800] font-medium">锁仓期重置提醒</p>
+                    <p className="text-white/50 mt-1">
+                      您当前有 {formatNumber(userInfo?.stakedAmount, 4)} LP 在锁仓中，剩余 {formatLockTime(lockStatus?.remainingTime)}。
+                      新增质押将<span className="text-[#FFB800]">重置锁仓期</span>为 {contractConfig?.lockDurationDays || 30} 天。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Divider */}
             <div className="divider-glow my-6" />
 
@@ -274,10 +419,10 @@ export default function LPMiningPage({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleWithdraw}
-              disabled={isWithdrawing || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
+              disabled={isWithdrawing || !withdrawAmount || parseFloat(withdrawAmount) <= 0 || lockStatus?.isLocked}
               className="w-full btn-ghost disabled:opacity-50"
             >
-              {isWithdrawing ? '解押中...' : '解押'}
+              {lockStatus?.isLocked ? `锁仓中 (${formatLockTime(lockStatus.remainingTime)})` : isWithdrawing ? '解押中...' : '解押'}
             </motion.button>
           </div>
         </motion.div>
@@ -369,16 +514,13 @@ export default function LPMiningPage({
                 <h4 className="font-semibold text-[#00D9A5]">推荐奖励比例</h4>
                 <div className="space-y-2">
                   {[
-                    { level: '1代推荐人', rate: '20%', total: '7%' },
-                    { level: '2代推荐人', rate: '10%', total: '3.5%' },
-                    { level: '3代推荐人', rate: '5%', total: '1.75%' },
+                    { level: '1代推荐人', rate: contractConfig?.referralLevel1 || 20 },
+                    { level: '2代推荐人', rate: contractConfig?.referralLevel2 || 10 },
+                    { level: '3代推荐人', rate: contractConfig?.referralLevel3 || 5 },
                   ].map((item) => (
                     <div key={item.level} className="flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/5">
                       <span className="text-white/60">{item.level}</span>
-                      <div className="text-right">
-                        <span className="font-medium text-white">{item.rate}</span>
-                        <span className="text-white/40 text-sm ml-2">(总收益 {item.total})</span>
-                      </div>
+                      <span className="font-medium text-white">{item.rate}%</span>
                     </div>
                   ))}
                 </div>
@@ -412,6 +554,24 @@ export default function LPMiningPage({
               </div>
             </div>
 
+            {/* Contract Config Info */}
+            <div className="space-y-4">
+              <h4 className="font-semibold text-white">当前合约配置</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: '总奖励', value: `${formatNumber(contractConfig?.totalRewards)} RWT` },
+                  { label: '挖矿周期', value: `${(contractConfig?.miningDurationDays / 365).toFixed(1)} 年` },
+                  { label: '锁仓天数', value: `${contractConfig?.lockDurationDays || 30} 天` },
+                  { label: '分流比例', value: `${contractConfig?.splitShare || 35}%` },
+                ].map((item) => (
+                  <div key={item.label} className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
+                    <div className="text-white/50 text-sm mb-1">{item.label}</div>
+                    <div className="font-bold text-white">{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* My Team Info */}
             <div className="space-y-4">
               <h4 className="font-semibold text-white">我的团队信息</h4>
@@ -434,6 +594,152 @@ export default function LPMiningPage({
           </div>
         )}
       </motion.div>
+
+      {/* Admin Panel */}
+      {isOwner && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-premium overflow-hidden border-2 border-[#FFB800]/30"
+        >
+          <button
+            onClick={() => setShowAdminPanel(!showAdminPanel)}
+            className="w-full p-5 flex items-center justify-between hover:bg-white/5 transition-colors"
+          >
+            <span className="font-semibold flex items-center gap-2 text-[#FFB800]">
+              <FiSettings className="w-5 h-5" />
+              管理员配置面板
+            </span>
+            {showAdminPanel ? <FiChevronUp className="text-[#FFB800]" /> : <FiChevronDown className="text-[#FFB800]" />}
+          </button>
+
+          {showAdminPanel && (
+            <div className="p-5 pt-0 space-y-6">
+              <div className="divider-glow" />
+
+              {/* 锁仓天数设置 */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-white">锁仓天数（当前：{contractConfig?.lockDurationDays} 天）</h4>
+                <div className="flex gap-3">
+                  <input
+                    type="number"
+                    value={adminConfig.lockDays}
+                    onChange={(e) => setAdminConfig(prev => ({ ...prev, lockDays: e.target.value }))}
+                    placeholder="输入天数"
+                    className="input-premium flex-1"
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleSetLockDuration}
+                    disabled={isUpdating || !adminConfig.lockDays}
+                    className="btn-premium px-6 disabled:opacity-50"
+                  >
+                    设置
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* 挖矿参数设置 */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-white">挖矿参数</h4>
+                <div className="grid md:grid-cols-3 gap-3">
+                  <input
+                    type="number"
+                    value={adminConfig.totalRewards}
+                    onChange={(e) => setAdminConfig(prev => ({ ...prev, totalRewards: e.target.value }))}
+                    placeholder="总奖励数量"
+                    className="input-premium"
+                  />
+                  <input
+                    type="number"
+                    value={adminConfig.miningYears}
+                    onChange={(e) => setAdminConfig(prev => ({ ...prev, miningYears: e.target.value }))}
+                    placeholder="挖矿周期（年）"
+                    className="input-premium"
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleSetMiningParams}
+                    disabled={isUpdating || !adminConfig.totalRewards || !adminConfig.miningYears}
+                    className="btn-premium disabled:opacity-50"
+                  >
+                    设置挖矿参数
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* 分配比例设置 */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-white">分配比例（两者之和必须等于100%）</h4>
+                <div className="grid md:grid-cols-3 gap-3">
+                  <input
+                    type="number"
+                    value={adminConfig.userShare}
+                    onChange={(e) => setAdminConfig(prev => ({ ...prev, userShare: e.target.value }))}
+                    placeholder="用户占比%"
+                    className="input-premium"
+                  />
+                  <input
+                    type="number"
+                    value={adminConfig.splitShare}
+                    onChange={(e) => setAdminConfig(prev => ({ ...prev, splitShare: e.target.value }))}
+                    placeholder="分流占比%"
+                    className="input-premium"
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleSetDistributionRates}
+                    disabled={isUpdating || !adminConfig.userShare || !adminConfig.splitShare}
+                    className="btn-premium disabled:opacity-50"
+                  >
+                    设置分配比例
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* 推荐比例设置 */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-white">推荐奖励比例</h4>
+                <div className="grid md:grid-cols-4 gap-3">
+                  <input
+                    type="number"
+                    value={adminConfig.ref1}
+                    onChange={(e) => setAdminConfig(prev => ({ ...prev, ref1: e.target.value }))}
+                    placeholder="1代%"
+                    className="input-premium"
+                  />
+                  <input
+                    type="number"
+                    value={adminConfig.ref2}
+                    onChange={(e) => setAdminConfig(prev => ({ ...prev, ref2: e.target.value }))}
+                    placeholder="2代%"
+                    className="input-premium"
+                  />
+                  <input
+                    type="number"
+                    value={adminConfig.ref3}
+                    onChange={(e) => setAdminConfig(prev => ({ ...prev, ref3: e.target.value }))}
+                    placeholder="3代%"
+                    className="input-premium"
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleSetReferralRates}
+                    disabled={isUpdating || !adminConfig.ref1 || !adminConfig.ref2 || !adminConfig.ref3}
+                    className="btn-premium disabled:opacity-50"
+                  >
+                    设置推荐比例
+                  </motion.button>
+                </div>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
     </div>
   );
 }

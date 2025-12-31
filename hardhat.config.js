@@ -15,10 +15,10 @@ module.exports = {
   networks: {
     hardhat: {},
     bscTestnet: {
-      url: "https://bsc-testnet-rpc.publicnode.com",
+      url: "https://data-seed-prebsc-1-s1.binance.org:8545/",
       chainId: 97,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-      timeout: 60000
+      timeout: 120000
     },
     bscMainnet: {
       url: "https://bsc-dataseed.binance.org/",

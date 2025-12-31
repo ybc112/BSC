@@ -1,14 +1,55 @@
 {
   "network": "bscTestnet",
-  "chainId": 97,
+  "chainId": "97",
   "deployer": "0xbe4aE94cb80780917132c4779d8bEa4E6804d792",
-  "deployTime": "2025-12-27T02:41:01.887Z",
-  "startTime": 1766803356,
-  "startTimeReadable": "2025-12-27T02:42:36.000Z",
+  "deployTime": "2025-12-30T04:51:56.928Z",
   "contracts": {
     "rewardToken": "0x57E9cBF035776321F2A0d4AE74785FB56bD48e1B",
     "lpToken": "0xf7839D5B542b6d278d42f61eeB5ca61127C2e652",
     "lpMining": "0x97060F561D1890bFAc0714B373123448486F13f8",
-    "tokenMining": "0x01e2F695b7fF307A07bD20F29Bc08f565dF2199A"
-  }
+    "tokenMining": "0x01e2F695b7fF307A07bD20F29Bc08f565dF2199A",
+    "lpMiningV2": "0x26BdE5cAcfe2b6Ad5084b690B2D9cF98CB426852"
+  },
+  "lpMiningV2Config": {
+    "startTime": 1767070610,
+    "startTimeHuman": "2025-12-30T04:56:50.000Z",
+    "rewardToken": "0x57E9cBF035776321F2A0d4AE74785FB56bD48e1B",
+    "lpToken": "0xf7839D5B542b6d278d42f61eeB5ca61127C2e652",
+    "totalRewards": "60000000.0",
+    "miningDurationDays": 1095,
+    "lockDurationDays": 30
+  },
+  "projectTokenV2": {
+    "address": "0xa3C9744b4a3C986E01d81009134589FF67748435",
+    "buyFee": "0%",
+    "sellFee": "2.8%",
+    "feeReceiver": "0xbe4aE94cb80780917132c4779d8bEa4E6804d792",
+    "pairAddress": "0xEFfBc0c8b7aad81c34bD9D7e8C93015EB0c0a968",
+    "pairWith": "WBNB"
+  },
+  "tokenMiningV2": {
+    "address": "0x985E09F19DCCEe529a259ae4DD08D641399F4ea7",
+    "stakingToken": "0xa3C9744b4a3C986E01d81009134589FF67748435",
+    "rewardToken": "0xa3C9744b4a3C986E01d81009134589FF67748435",
+    "startTime": 1767172613,
+    "tiers": {
+      "flexible": {
+        "duration": "0 days",
+        "dailyRate": "0.4%"
+      },
+      "threeMonths": {
+        "duration": "90 days",
+        "dailyRate": "0.6%"
+      },
+      "sixMonths": {
+        "duration": "180 days",
+        "dailyRate": "0.8%"
+      },
+      "twelveMonths": {
+        "duration": "365 days",
+        "dailyRate": "1.0%"
+      }
+    }
+  },
+  "deployedAt": "2025-12-31T09:15:56.828Z"
 }

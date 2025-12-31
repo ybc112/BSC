@@ -1,9 +1,14 @@
-// BSC Testnet 合约地址 (2025-12-26 部署)
+// BSC Testnet 合约地址 (2025-12-31 更新 - V2版本)
 export const CONTRACTS = {
-  REWARD_TOKEN: '0xc128619A2a2509d4d43BccC16a1180532D033A74',
-  LP_TOKEN: '0xEF6363Af32A6fD4BA6A2d8f6C396F5707849A0be',
-  LP_MINING: '0xCd339aec4797790A8e387eF10035df0000d3a815',
-  TOKEN_MINING: '0xB4089956A0b775638e8F9F2E17deaE35B102c860',
+  REWARD_TOKEN: '0x57E9cBF035776321F2A0d4AE74785FB56bD48e1B',
+  LP_TOKEN: '0xf7839D5B542b6d278d42f61eeB5ca61127C2e652',
+  LP_MINING: '0x26BdE5cAcfe2b6Ad5084b690B2D9cF98CB426852',  // LPMiningV2 全参数可配置
+  TOKEN_MINING: '0x01e2F695b7fF307A07bD20F29Bc08f565dF2199A',
+  // V2 合约
+  PROJECT_TOKEN_V2: '0xa3C9744b4a3C986E01d81009134589FF67748435',  // ProjectTokenV2 带滑点
+  TOKEN_MINING_V2: '0x985E09F19DCCEe529a259ae4DD08D641399F4ea7',   // TokenMiningV2 多档锁仓
+  // 交易对
+  TOKEN_V2_PAIR: '0xEFfBc0c8b7aad81c34bD9D7e8C93015EB0c0a968',    // ProjectTokenV2/WBNB LP
 };
 
 // BSC 网络配置
@@ -48,6 +53,21 @@ export const MINING_CONFIG = {
     DAILY_RATE: 0.5, // 0.5%
     APY: 182.5, // 0.5% * 365
   },
+  // V2 代币挖矿 - 多档锁仓（APY = 日收益 × 365，与合约一致）
+  TOKEN_MINING_V2: {
+    TOTAL_REWARDS: 30_000_000,
+    TIERS: {
+      FLEXIBLE: { duration: 0, dailyRate: 0.4, apy: 146 },      // 0.4% × 365 = 146%
+      THREE_MONTHS: { duration: 90, dailyRate: 0.6, apy: 219 }, // 0.6% × 365 = 219%
+      SIX_MONTHS: { duration: 180, dailyRate: 0.8, apy: 292 },  // 0.8% × 365 = 292%
+      TWELVE_MONTHS: { duration: 365, dailyRate: 1.0, apy: 365 }, // 1.0% × 365 = 365%
+    },
+  },
+  // V2 代币 - 买卖滑点
+  TOKEN_V2: {
+    BUY_FEE: 0,      // 买入滑点 0%
+    SELL_FEE: 2.8,   // 卖出滑点 2.8%
+  },
   REFERRAL: {
     LEVEL1: 20, // 20%
     LEVEL2: 10, // 10%
@@ -58,6 +78,40 @@ export const MINING_CONFIG = {
     LEVEL2: { threshold: 5000, rate: 1.5 },
     LEVEL3: { threshold: 10000, rate: 2 },
   },
+};
+
+// 锁仓档位枚举（与合约保持一致）
+export const LOCK_TIERS = {
+  FLEXIBLE: 0,
+  THREE_MONTHS: 1,
+  SIX_MONTHS: 2,
+  TWELVE_MONTHS: 3,
+};
+
+// 锁仓档位名称
+export const LOCK_TIER_NAMES = {
+  0: '随进随出',
+  1: '3个月',
+  2: '6个月',
+  3: '12个月',
+};
+
+// APY计算工具 - 复利公式（仅供参考，实际显示使用合约的简单年化）
+// 合约使用简单年化：APY = 日收益% × 365
+// 复利公式：APY = (1 + r)^365 - 1（实际收益会更高）
+export const calculateAPY = (dailyRate) => {
+  // dailyRate 是百分比，如 0.4 表示 0.4%
+  // 复利公式: APY = (1 + r)^365 - 1
+  const r = dailyRate / 100; // 转换为小数
+  const apy = (Math.pow(1 + r, 365) - 1) * 100;
+  return Math.round(apy); // 返回整数百分比
+};
+
+// 简单年化计算（与合约一致）
+export const calculateSimpleAPY = (dailyRate) => {
+  // dailyRate 是百分比，如 0.4 表示 0.4%
+  // 简单年化: APY = 日收益% × 365
+  return Math.round(dailyRate * 365);
 };
 
 // 格式化工具
@@ -79,4 +133,65 @@ export const formatEther = (value, decimals = 4) => {
   if (!value) return '0';
   const num = parseFloat(value) / 1e18;
   return num.toFixed(decimals);
+};
+
+// 合约错误消息映射 - 提供友好的中文提示
+export const CONTRACT_ERRORS = {
+  // LPMiningV2 错误
+  'Already has referrer': '您已设置过推荐人，无法更改',
+  'Cannot refer self': '不能将自己设为推荐人',
+  'Referrer must be staker or owner': '推荐人必须是已质押用户或合约所有者',
+  'Referrer has too many referrals': '该推荐人的直推人数已达上限',
+  'Circular referral not allowed': '不允许循环推荐',
+  'Lock duration not passed': '锁仓期未到，无法提取',
+  'Amount exceeds staked': '提取数量超过已质押数量',
+  'Mining not started': '挖矿尚未开始',
+  'Mining ended': '挖矿已结束',
+  'No rewards to claim': '暂无可领取收益',
+  'No referral rewards': '暂无推荐奖励',
+  'No team rewards': '暂无团队奖励',
+  'Insufficient balance': '余额不足',
+  'Insufficient allowance': '授权额度不足',
+
+  // TokenMiningV2 错误
+  'Invalid tier': '无效的锁仓档位',
+  'Stake not found': '质押记录不存在',
+  'Stake already withdrawn': '该质押已提取',
+  'Lock period not ended': '锁仓期未结束',
+  'No pending rewards': '暂无待领取收益',
+  'Rewards depleted': '奖励池已耗尽',
+  'Too many active stakes': '活跃质押数量已达上限（最多50笔）',
+  'Stake not active': '该质押记录已失效',
+
+  // ProjectTokenV2 错误
+  'Fee too high': '滑点设置过高（最高10%）',
+  'Invalid address': '无效的地址',
+
+  // 通用错误
+  'user rejected transaction': '您取消了交易',
+  'insufficient funds': '钱包余额不足以支付 Gas 费',
+  'execution reverted': '交易执行失败',
+};
+
+// 解析错误消息
+export const parseContractError = (error) => {
+  if (!error) return '操作失败';
+
+  // 尝试从 error.reason 获取
+  const reason = error.reason || error.message || '';
+
+  // 检查是否匹配已知错误
+  for (const [key, value] of Object.entries(CONTRACT_ERRORS)) {
+    if (reason.toLowerCase().includes(key.toLowerCase())) {
+      return value;
+    }
+  }
+
+  // 检查用户拒绝
+  if (reason.includes('user rejected') || reason.includes('denied')) {
+    return '您取消了交易';
+  }
+
+  // 返回原始错误或默认消息
+  return reason || '操作失败，请稍后重试';
 };

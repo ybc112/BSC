@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { CONTRACTS } from '../utils/constants';
-import { LP_MINING_ABI, TOKEN_MINING_ABI, ERC20_ABI } from '../abi';
+import { LP_MINING_ABI, TOKEN_MINING_ABI, ERC20_ABI, TOKEN_MINING_V2_ABI, PROJECT_TOKEN_V2_ABI } from '../abi';
 
 export function useContracts(signer, provider) {
   const [contracts, setContracts] = useState({
@@ -9,6 +9,9 @@ export function useContracts(signer, provider) {
     tokenMining: null,
     rewardToken: null,
     lpToken: null,
+    // V2 合约
+    tokenMiningV2: null,
+    projectTokenV2: null,
   });
 
   useEffect(() => {
@@ -21,7 +24,18 @@ export function useContracts(signer, provider) {
     const rewardToken = new ethers.Contract(CONTRACTS.REWARD_TOKEN, ERC20_ABI, signerOrProvider);
     const lpToken = new ethers.Contract(CONTRACTS.LP_TOKEN, ERC20_ABI, signerOrProvider);
 
-    setContracts({ lpMining, tokenMining, rewardToken, lpToken });
+    // V2 合约
+    let tokenMiningV2 = null;
+    let projectTokenV2 = null;
+
+    if (CONTRACTS.TOKEN_MINING_V2) {
+      tokenMiningV2 = new ethers.Contract(CONTRACTS.TOKEN_MINING_V2, TOKEN_MINING_V2_ABI, signerOrProvider);
+    }
+    if (CONTRACTS.PROJECT_TOKEN_V2) {
+      projectTokenV2 = new ethers.Contract(CONTRACTS.PROJECT_TOKEN_V2, PROJECT_TOKEN_V2_ABI, signerOrProvider);
+    }
+
+    setContracts({ lpMining, tokenMining, rewardToken, lpToken, tokenMiningV2, projectTokenV2 });
   }, [signer, provider]);
 
   return contracts;
@@ -34,6 +48,10 @@ export function useLPMining(contract, account) {
     pendingReward: '0',
     referrals: [],
     teamConfig: null,
+    contractConfig: null,
+    splitConfig: { addresses: [], rates: [] },
+    lockStatus: null,
+    isOwner: false,
     loading: true,
   });
 
@@ -44,13 +62,52 @@ export function useLPMining(contract, account) {
       const miningStatus = await contract.getMiningStatus();
       const teamConfig = await contract.getTeamLevelConfig();
 
+      // 获取合约配置参数
+      const [
+        lockDuration,
+        totalRewards,
+        miningDuration,
+        userBaseShare,
+        splitShare,
+        referralLevel1,
+        referralLevel2,
+        referralLevel3,
+        owner
+      ] = await Promise.all([
+        contract.lockDuration(),
+        contract.totalRewards(),
+        contract.miningDuration(),
+        contract.userBaseShare(),
+        contract.splitShare(),
+        contract.referralLevel1(),
+        contract.referralLevel2(),
+        contract.referralLevel3(),
+        contract.owner()
+      ]);
+
+      // 获取分流配置
+      let splitConfig = { addresses: [], rates: [] };
+      try {
+        const splitData = await contract.getSplitConfig();
+        splitConfig = {
+          addresses: splitData.addresses,
+          rates: splitData.rates.map(r => Number(r) / 100), // 转为百分比
+        };
+      } catch (err) {
+        console.error('Fetch split config error:', err);
+      }
+
       let userInfo = null;
       let pendingReward = '0';
       let referrals = [];
+      let lockStatus = null;
+      let isOwner = false;
 
       if (account) {
         userInfo = await contract.getUserInfo(account);
         pendingReward = await contract.pendingReward(account);
+        lockStatus = await contract.getLockStatus(account);
+        isOwner = owner.toLowerCase() === account.toLowerCase();
         try {
           referrals = await contract.getReferrals(account);
         } catch {
@@ -70,6 +127,13 @@ export function useLPMining(contract, account) {
           teamPerformance: ethers.formatEther(userInfo.teamPerformance),
           smallAreaPerformance: ethers.formatEther(userInfo.smallAreaPerformance),
           teamLevel: Number(userInfo.teamLevel),
+          unlockTime: Number(userInfo.unlockTime),
+          isLocked: userInfo.isLocked,
+        } : null,
+        lockStatus: lockStatus ? {
+          unlockTime: Number(lockStatus.unlockTime),
+          remainingTime: Number(lockStatus.remainingTime),
+          isLocked: lockStatus.isLocked,
         } : null,
         miningStatus: {
           totalStaked: ethers.formatEther(miningStatus._totalStaked),
@@ -86,6 +150,20 @@ export function useLPMining(contract, account) {
           thresholds: teamConfig.thresholds.map(t => ethers.formatEther(t)),
           rates: teamConfig.rates.map(r => Number(r) / 100),
         },
+        contractConfig: {
+          lockDuration: Number(lockDuration),
+          lockDurationDays: Number(lockDuration) / 86400,
+          totalRewards: ethers.formatEther(totalRewards),
+          miningDuration: Number(miningDuration),
+          miningDurationDays: Number(miningDuration) / 86400,
+          userBaseShare: Number(userBaseShare) / 100,
+          splitShare: Number(splitShare) / 100,
+          referralLevel1: Number(referralLevel1) / 100,
+          referralLevel2: Number(referralLevel2) / 100,
+          referralLevel3: Number(referralLevel3) / 100,
+        },
+        splitConfig,
+        isOwner,
         loading: false,
       });
     } catch (err) {
@@ -154,6 +232,136 @@ export function useTokenMining(contract, account) {
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 15000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  return { ...data, refetch: fetchData };
+}
+
+// TokenMiningV2 Hook - 多档锁仓挖矿
+export function useTokenMiningV2(contract, account) {
+  const [data, setData] = useState({
+    userInfo: null,
+    stakes: [],
+    miningStatus: null,
+    tierConfigs: null,
+    pendingRewardAll: '0',
+    loading: true,
+  });
+
+  const fetchData = useCallback(async () => {
+    if (!contract) return;
+
+    try {
+      const miningStatus = await contract.getMiningStatus();
+      const tierConfigs = await contract.getAllTierConfigs();
+
+      let userInfo = null;
+      let stakes = [];
+      let pendingRewardAll = '0';
+
+      if (account) {
+        userInfo = await contract.getUserInfo(account);
+        pendingRewardAll = await contract.pendingRewardAll(account);
+
+        // 获取用户所有质押记录
+        try {
+          const userStakes = await contract.getUserStakes(account);
+          stakes = userStakes.stakeIds.map((id, index) => ({
+            stakeId: Number(id),
+            amount: ethers.formatEther(userStakes.amounts[index]),
+            unlockTime: Number(userStakes.unlockTimes[index]),
+            tier: Number(userStakes.tiers[index]),
+            pendingReward: ethers.formatEther(userStakes.pendingRewards[index]),
+            active: userStakes.actives[index],
+          })).filter(s => s.active);
+        } catch (err) {
+          console.error('Fetch stakes error:', err);
+          stakes = [];
+        }
+      }
+
+      setData({
+        userInfo: userInfo ? {
+          totalStaked: ethers.formatEther(userInfo._totalStaked),
+          totalClaimed: ethers.formatEther(userInfo._totalClaimed),
+          stakeCount: Number(userInfo._stakeCount),
+          pendingRewards: ethers.formatEther(userInfo._pendingRewards),
+          activeStakeCount: Number(userInfo._activeStakeCount || 0),
+        } : null,
+        stakes,
+        miningStatus: {
+          totalStaked: ethers.formatEther(miningStatus._totalStaked),
+          totalDistributed: ethers.formatEther(miningStatus._totalDistributed),
+          remainingRewards: ethers.formatEther(miningStatus._remainingRewards),
+          miningEnded: miningStatus._miningEnded,
+          startTime: Number(miningStatus._startTime),
+        },
+        tierConfigs: {
+          durations: tierConfigs.durations.map(d => Number(d)),
+          dailyRates: tierConfigs.dailyRates.map(r => Number(r) / 100), // 转为百分比
+          annualAPYs: tierConfigs.annualAPYs.map(a => Number(a) / 100),
+        },
+        pendingRewardAll: ethers.formatEther(pendingRewardAll),
+        loading: false,
+      });
+    } catch (err) {
+      console.error('Fetch TokenMiningV2 data error:', err);
+      setData(prev => ({ ...prev, loading: false }));
+    }
+  }, [contract, account]);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 15000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  return { ...data, refetch: fetchData };
+}
+
+// ProjectTokenV2 Hook - 带滑点代币
+export function useProjectTokenV2(contract, account) {
+  const [data, setData] = useState({
+    balance: '0',
+    feeConfig: null,
+    isExcluded: false,
+    loading: true,
+  });
+
+  const fetchData = useCallback(async () => {
+    if (!contract) return;
+
+    try {
+      const feeConfig = await contract.getFeeConfig();
+
+      let balance = '0';
+      let isExcluded = false;
+
+      if (account) {
+        balance = await contract.balanceOf(account);
+        isExcluded = await contract.isExcludedFromFee(account);
+      }
+
+      setData({
+        balance: ethers.formatEther(balance),
+        feeConfig: {
+          buyFee: Number(feeConfig._buyFee) / 100, // 转为百分比
+          sellFee: Number(feeConfig._sellFee) / 100,
+          feeReceiver: feeConfig._feeReceiver,
+        },
+        isExcluded,
+        loading: false,
+      });
+    } catch (err) {
+      console.error('Fetch ProjectTokenV2 data error:', err);
+      setData(prev => ({ ...prev, loading: false }));
+    }
+  }, [contract, account]);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, [fetchData]);
 

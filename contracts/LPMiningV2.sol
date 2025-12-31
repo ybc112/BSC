@@ -7,43 +7,66 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
- * @title LPMining
- * @dev LP质押挖矿合约
- * - 总量6000万代币，3年释放
- * - 领取收益时35%分流（分红+团队奖励）
- * - 推荐奖励：1代20%，2代10%，3代5%（从35%中扣除）
- * - 团队奖励：根据小区业绩享受网体收益1%/1.5%/2%（从剩余中扣除）
+ * @title LPMiningV2
+ * @dev LP质押挖矿合约 V2
+ *
+ * 新的收益分配逻辑：
+ * - 65% 基础部分：推荐奖励和团队奖励从这里扣，剩余归用户
+ * - 35% 分流部分：固定分流到配置的多个地址
+ *
+ * 推荐奖励（从65%中扣除）：
+ * - 1代推荐人：20%
+ * - 2代推荐人：10%
+ * - 3代推荐人：5%
+ * - 没有推荐人则归用户自己
+ *
+ * 团队极差奖励（从65%中扣除）：
+ * - 根据小区业绩享受1%/1.5%/2%
+ *
+ * 锁仓功能：
+ * - 用户质押后有固定锁仓期
+ * - 锁仓期内不能提取LP
+ * - 锁仓期由管理员配置
  */
-contract LPMining is Ownable, ReentrancyGuard {
+contract LPMiningV2 is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // 代币和LP地址
     IERC20 public rewardToken;
     IERC20 public lpToken;
 
-    // 挖矿参数
-    uint256 public constant TOTAL_REWARDS = 60_000_000 * 1e18;  // 6000万代币
-    uint256 public constant MINING_DURATION = 3 * 365 days;      // 3年
+    // 挖矿参数（可配置）
+    uint256 public totalRewards = 60_000_000 * 1e18;  // 6000万代币，可配置
+    uint256 public miningDuration = 3 * 365 days;      // 3年，可配置
     uint256 public rewardPerSecond;                              // 每秒释放量
     uint256 public startTime;
     uint256 public endTime;
-    bool public miningEnded;  // 挖矿结束标记
+    bool public miningEnded;
 
-    // 收益分配比例 (基数10000)
+    // 锁仓参数（无上限）
+    uint256 public lockDuration = 30 days;  // 默认锁仓30天，可配置，无上限
+
+    // 收益分配比例 (基数10000，可配置)
     uint256 public constant DISTRIBUTION_BASE = 10000;
-    uint256 public constant USER_SHARE = 6500;      // 用户获得65%
-    uint256 public constant BONUS_SHARE = 3500;     // 35%用于分红和团队奖励
+    uint256 public userBaseShare = 6500;      // 65% 基础部分，可配置
+    uint256 public splitShare = 3500;          // 35% 分流部分，可配置
 
-    // 推荐奖励比例（从35%中按比例分配）
-    // 注意：这里的比例是相对于35%的奖励池，不是总收益
-    uint256 public constant REFERRAL_LEVEL1 = 2000; // 1代 20% of 35% = 7% of total
-    uint256 public constant REFERRAL_LEVEL2 = 1000; // 2代 10% of 35% = 3.5% of total
-    uint256 public constant REFERRAL_LEVEL3 = 500;  // 3代 5% of 35% = 1.75% of total
-    // 推荐奖励合计最多35%，剩余65%给团队奖励分配
+    // 推荐奖励比例（从基础部分中扣除，可配置）
+    uint256 public referralLevel1 = 2000; // 1代 20%
+    uint256 public referralLevel2 = 1000; // 2代 10%
+    uint256 public referralLevel3 = 500;  // 3代 5%
 
     // 团队等级阈值和奖励比例 (可配置)
     uint256[] public teamLevelThresholds;  // LP数量阈值
     uint256[] public teamLevelRates;       // 对应奖励比例 (基数10000)
+
+    // 35%分流地址配置
+    struct SplitAddress {
+        address addr;
+        uint256 rate;  // 占35%的比例 (基数10000)
+    }
+    SplitAddress[] public splitAddresses;
+    uint256 public totalSplitRate;  // 所有分流比例之和
 
     // 推荐链最大深度（防止gas过高）
     uint256 public constant MAX_REFERRAL_DEPTH = 50;
@@ -64,6 +87,7 @@ contract LPMining is Ownable, ReentrancyGuard {
         uint256 bigAreaPerformance;   // 大区业绩
         uint256 smallAreaPerformance; // 小区业绩
         uint256 directReferrals;  // 直推人数
+        uint256 unlockTime;       // 解锁时间（锁仓到期时间）
     }
 
     // 全局状态
@@ -71,27 +95,31 @@ contract LPMining is Ownable, ReentrancyGuard {
     uint256 public accRewardPerShare;  // 累计每份奖励 (精度1e18)
     uint256 public lastRewardTime;
     uint256 public totalDistributed;   // 基础挖矿已分发
-    uint256 public totalBonusDistributed; // 奖励已分发
+    uint256 public totalReferralDistributed;  // 推荐奖励已分发
+    uint256 public totalTeamDistributed;      // 团队奖励已分发
+    uint256 public totalSplitDistributed;     // 分流已分发
 
     // 用户数据
     mapping(address => UserInfo) public userInfo;
     mapping(address => address[]) public referrals;  // 直推列表
     mapping(address => bool) public hasReferrer;
 
-    // 未分配的奖励池（没有推荐人时的奖励）
-    uint256 public unallocatedPool;
-
     // 事件
-    event Deposit(address indexed user, uint256 amount);
+    event Deposit(address indexed user, uint256 amount, uint256 unlockTime);
     event Withdraw(address indexed user, uint256 amount);
-    event Claim(address indexed user, uint256 userAmount, uint256 bonusAmount);
+    event Claim(address indexed user, uint256 userAmount, uint256 splitAmount);
     event ReferrerSet(address indexed user, address indexed referrer);
     event ReferralReward(address indexed user, address indexed referrer, uint256 level, uint256 amount);
     event TeamReward(address indexed user, uint256 amount);
     event TeamLevelUpdated(uint256[] thresholds, uint256[] rates);
+    event SplitAddressUpdated(address[] addresses, uint256[] rates);
+    event SplitDistributed(address indexed to, uint256 amount);
     event AdminTransferLP(address indexed to, uint256 amount);
     event MiningEnded(uint256 totalDistributed);
-    event UnallocatedReward(uint256 amount);
+    event LockDurationUpdated(uint256 oldDuration, uint256 newDuration);
+    event MiningParamsUpdated(uint256 totalRewards, uint256 miningDuration, uint256 rewardPerSecond);
+    event DistributionRatesUpdated(uint256 userBaseShare, uint256 splitShare);
+    event ReferralRatesUpdated(uint256 level1, uint256 level2, uint256 level3);
 
     constructor(
         address _rewardToken,
@@ -105,9 +133,9 @@ contract LPMining is Ownable, ReentrancyGuard {
         rewardToken = IERC20(_rewardToken);
         lpToken = IERC20(_lpToken);
         startTime = _startTime;
-        endTime = _startTime + MINING_DURATION;
+        endTime = _startTime + miningDuration;
         lastRewardTime = _startTime;
-        rewardPerSecond = TOTAL_REWARDS / MINING_DURATION;
+        rewardPerSecond = totalRewards / miningDuration;
 
         // 初始化团队等级 (默认值，可通过setTeamLevels修改)
         teamLevelThresholds = [1000 * 1e18, 5000 * 1e18, 10000 * 1e18];
@@ -129,7 +157,7 @@ contract LPMining is Ownable, ReentrancyGuard {
         // 检查推荐人的直推数量是否已达上限
         require(userInfo[_referrer].directReferrals < MAX_DIRECT_REFERRALS, "Referrer has too many referrals");
 
-        // 防止循环推荐：检查_referrer的上级链中是否包含msg.sender
+        // 防止循环推荐
         require(!_isInReferralChain(_referrer, msg.sender), "Circular referral not allowed");
 
         userInfo[msg.sender].referrer = _referrer;
@@ -182,12 +210,16 @@ contract LPMining is Ownable, ReentrancyGuard {
         user.amount += _amount;
         totalStaked += _amount;
 
+        // 更新锁仓时间（每次质押都会重置锁仓期）
+        uint256 newUnlockTime = block.timestamp + lockDuration;
+        user.unlockTime = newUnlockTime;
+
         // 更新团队业绩
         _updateTeamPerformance(msg.sender, _amount, true);
 
         user.rewardDebt = user.amount * accRewardPerShare / 1e18;
 
-        emit Deposit(msg.sender, _amount);
+        emit Deposit(msg.sender, _amount, newUnlockTime);
     }
 
     /**
@@ -196,6 +228,7 @@ contract LPMining is Ownable, ReentrancyGuard {
     function withdraw(uint256 _amount) external nonReentrant {
         UserInfo storage user = userInfo[msg.sender];
         require(user.amount >= _amount, "Insufficient balance");
+        require(block.timestamp >= user.unlockTime, "Still in lock period");
 
         updatePool();
 
@@ -222,6 +255,17 @@ contract LPMining is Ownable, ReentrancyGuard {
 
     /**
      * @dev 领取收益
+     *
+     * 收益分配逻辑（优化版）：
+     *
+     * 65%基础部分：
+     * - 推荐奖励（有则分配，无则归用户）
+     * - 团队奖励（极差制，未分配部分进分流）
+     * - 剩余归用户
+     *
+     * 35%分流部分：
+     * - 原35% + 未分配的团队奖励
+     * - 全部分配到配置的分流地址
      */
     function claim() external nonReentrant {
         updatePool();
@@ -233,21 +277,48 @@ contract LPMining is Ownable, ReentrancyGuard {
 
         require(totalPending > 0, "No rewards to claim");
 
-        // 计算分配：用户65%，奖励池35%
-        uint256 userAmount = totalPending * USER_SHARE / DISTRIBUTION_BASE;
-        uint256 bonusAmount = totalPending - userAmount;
+        // 检查合约奖励代币余额是否足够
+        uint256 rewardBalance = rewardToken.balanceOf(address(this));
+        require(rewardBalance >= totalPending, "Insufficient reward balance");
 
-        // 发放用户收益
+        // 计算基础部分和分流部分
+        uint256 baseAmount = totalPending * userBaseShare / DISTRIBUTION_BASE;
+        uint256 baseSplitAmount = totalPending - baseAmount;  // 35%分流部分
+
+        // === 分配推荐奖励（从65%基础部分扣除）===
+        // 有推荐人则分配，没有推荐人则归用户自己
+        uint256 referralDistributed = _distributeReferralRewards(msg.sender, baseAmount);
+
+        // === 计算团队预留（最高等级比例，用于极差制分配）===
+        uint256 teamReserveRate = teamLevelRates.length > 0 ? teamLevelRates[teamLevelRates.length - 1] : 0;
+        uint256 teamReserve = baseAmount * teamReserveRate / DISTRIBUTION_BASE;
+
+        // === 分配团队奖励（从团队预留中分配）===
+        uint256 teamDistributed = _distributeTeamRewards(msg.sender, baseAmount);
+
+        // === 计算用户获得金额 ===
+        // 用户获得 = 65%基础部分 - 实际分配的推荐奖励 - 团队预留
+        uint256 userAmount = baseAmount - referralDistributed - teamReserve;
+
+        // === 计算未分配的团队奖励，转入35%分流 ===
+        uint256 unallocatedTeam = teamReserve > teamDistributed ? teamReserve - teamDistributed : 0;
+
+        // 更新用户状态
         user.pendingRewards = 0;
         user.rewardDebt = user.amount * accRewardPerShare / 1e18;
         user.totalClaimed += userAmount;
 
-        rewardToken.safeTransfer(msg.sender, userAmount);
+        // 发放用户收益
+        if (userAmount > 0) {
+            rewardToken.safeTransfer(msg.sender, userAmount);
+        }
 
-        // 分配推荐奖励和团队奖励
-        _distributeReferralRewards(msg.sender, bonusAmount);
+        // === 分配35%分流部分 ===
+        // 总分流 = 原35% + 未分配的团队奖励
+        uint256 totalSplitAmount = baseSplitAmount + unallocatedTeam;
+        _distributeSplitAmount(totalSplitAmount);
 
-        emit Claim(msg.sender, userAmount, bonusAmount);
+        emit Claim(msg.sender, userAmount, totalSplitAmount);
     }
 
     /**
@@ -257,6 +328,9 @@ contract LPMining is Ownable, ReentrancyGuard {
         UserInfo storage user = userInfo[msg.sender];
         uint256 amount = user.referralRewards;
         require(amount > 0, "No referral rewards");
+
+        // 检查余额
+        require(rewardToken.balanceOf(address(this)) >= amount, "Insufficient reward balance");
 
         user.referralRewards = 0;
         rewardToken.safeTransfer(msg.sender, amount);
@@ -269,6 +343,9 @@ contract LPMining is Ownable, ReentrancyGuard {
         UserInfo storage user = userInfo[msg.sender];
         uint256 amount = user.teamRewards;
         require(amount > 0, "No team rewards");
+
+        // 检查余额
+        require(rewardToken.balanceOf(address(this)) >= amount, "Insufficient reward balance");
 
         user.teamRewards = 0;
         rewardToken.safeTransfer(msg.sender, amount);
@@ -292,7 +369,6 @@ contract LPMining is Ownable, ReentrancyGuard {
 
         uint256 endTimestamp = block.timestamp > endTime ? endTime : block.timestamp;
         if (endTimestamp <= lastRewardTime) {
-            // 挖矿已结束
             if (!miningEnded && block.timestamp > endTime) {
                 miningEnded = true;
                 emit MiningEnded(totalDistributed);
@@ -303,14 +379,13 @@ contract LPMining is Ownable, ReentrancyGuard {
         uint256 duration = endTimestamp - lastRewardTime;
         uint256 reward = duration * rewardPerSecond;
 
-        if (totalDistributed + reward >= TOTAL_REWARDS) {
-            reward = TOTAL_REWARDS - totalDistributed;
+        if (totalDistributed + reward >= totalRewards) {
+            reward = totalRewards - totalDistributed;
             miningEnded = true;
             emit MiningEnded(totalDistributed + reward);
         }
 
         if (reward > 0) {
-            // 使用1e18精度，避免精度损失
             accRewardPerShare += reward * 1e18 / totalStaked;
             totalDistributed += reward;
         }
@@ -319,63 +394,53 @@ contract LPMining is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev 分配推荐奖励
-     * 推荐奖励规则：
-     * - 1代推荐人获得 bonusAmount 的 20%
-     * - 2代推荐人获得 bonusAmount 的 10%
-     * - 3代推荐人获得 bonusAmount 的 5%
-     * - 剩余部分用于团队奖励
+     * @dev 分配推荐奖励（从65%基础部分扣除）
+     * @return deducted 实际扣除的推荐奖励总额
      */
-    function _distributeReferralRewards(address _user, uint256 _amount) internal {
-        uint256 distributed = 0;
+    function _distributeReferralRewards(address _user, uint256 _baseAmount) internal returns (uint256 deducted) {
+        deducted = 0;
 
         // 1代推荐人
         address ref1 = userInfo[_user].referrer;
         if (ref1 != address(0)) {
-            uint256 reward1 = _amount * REFERRAL_LEVEL1 / DISTRIBUTION_BASE;
+            uint256 reward1 = _baseAmount * referralLevel1 / DISTRIBUTION_BASE;
             userInfo[ref1].referralRewards += reward1;
-            distributed += reward1;
-            totalBonusDistributed += reward1;
+            deducted += reward1;
+            totalReferralDistributed += reward1;
             emit ReferralReward(_user, ref1, 1, reward1);
 
             // 2代推荐人
             address ref2 = userInfo[ref1].referrer;
             if (ref2 != address(0)) {
-                uint256 reward2 = _amount * REFERRAL_LEVEL2 / DISTRIBUTION_BASE;
+                uint256 reward2 = _baseAmount * referralLevel2 / DISTRIBUTION_BASE;
                 userInfo[ref2].referralRewards += reward2;
-                distributed += reward2;
-                totalBonusDistributed += reward2;
+                deducted += reward2;
+                totalReferralDistributed += reward2;
                 emit ReferralReward(_user, ref2, 2, reward2);
 
                 // 3代推荐人
                 address ref3 = userInfo[ref2].referrer;
                 if (ref3 != address(0)) {
-                    uint256 reward3 = _amount * REFERRAL_LEVEL3 / DISTRIBUTION_BASE;
+                    uint256 reward3 = _baseAmount * referralLevel3 / DISTRIBUTION_BASE;
                     userInfo[ref3].referralRewards += reward3;
-                    distributed += reward3;
-                    totalBonusDistributed += reward3;
+                    deducted += reward3;
+                    totalReferralDistributed += reward3;
                     emit ReferralReward(_user, ref3, 3, reward3);
                 }
             }
         }
+        // 如果没有推荐人，不扣除任何金额，全部归用户
 
-        // 剩余部分用于团队奖励
-        uint256 remaining = _amount - distributed;
-        if (remaining > 0) {
-            _distributeTeamRewards(_user, remaining);
-        }
+        return deducted;
     }
 
     /**
-     * @dev 分配团队奖励
-     * 团队奖励规则：
-     * - 根据上级的小区业绩确定奖励比例
-     * - 每个上级从剩余金额中按比例获取，采用极差制
-     * - 最多遍历 MAX_REFERRAL_DEPTH 层防止gas过高
+     * @dev 分配团队奖励（从65%基础部分扣除，极差制）
+     * @return deducted 实际扣除的团队奖励总额
      */
-    function _distributeTeamRewards(address _user, uint256 _amount) internal {
+    function _distributeTeamRewards(address _user, uint256 _amount) internal returns (uint256 deducted) {
         address current = userInfo[_user].referrer;
-        uint256 distributed = 0;
+        deducted = 0;
         uint256 lastRate = 0;
         uint256 depth = 0;
 
@@ -388,15 +453,10 @@ contract LPMining is Ownable, ReentrancyGuard {
                 uint256 diffRate = currentRate - lastRate;
                 uint256 reward = _amount * diffRate / DISTRIBUTION_BASE;
 
-                // 确保不超发
-                if (distributed + reward > _amount) {
-                    reward = _amount - distributed;
-                }
-
                 if (reward > 0) {
                     leader.teamRewards += reward;
-                    distributed += reward;
-                    totalBonusDistributed += reward;
+                    deducted += reward;
+                    totalTeamDistributed += reward;
                     emit TeamReward(current, reward);
                 }
 
@@ -407,11 +467,42 @@ contract LPMining is Ownable, ReentrancyGuard {
             depth++;
         }
 
-        // 未分配的部分进入未分配池
-        if (distributed < _amount) {
-            unallocatedPool += (_amount - distributed);
-            emit UnallocatedReward(_amount - distributed);
+        return deducted;
+    }
+
+    /**
+     * @dev 分配35%分流部分到配置的地址
+     */
+    function _distributeSplitAmount(uint256 _amount) internal {
+        if (splitAddresses.length == 0 || totalSplitRate == 0) {
+            // 没有配置分流地址，转给owner
+            rewardToken.safeTransfer(owner(), _amount);
+            totalSplitDistributed += _amount;
+            emit SplitDistributed(owner(), _amount);
+            return;
         }
+
+        uint256 distributed = 0;
+        for (uint256 i = 0; i < splitAddresses.length; i++) {
+            uint256 share = _amount * splitAddresses[i].rate / totalSplitRate;
+            if (share > 0 && splitAddresses[i].addr != address(0)) {
+                rewardToken.safeTransfer(splitAddresses[i].addr, share);
+                distributed += share;
+                emit SplitDistributed(splitAddresses[i].addr, share);
+            }
+        }
+
+        // 如果有剩余（精度损失），转给最后一个地址
+        if (distributed < _amount && splitAddresses.length > 0) {
+            uint256 remaining = _amount - distributed;
+            address lastAddr = splitAddresses[splitAddresses.length - 1].addr;
+            if (lastAddr != address(0)) {
+                rewardToken.safeTransfer(lastAddr, remaining);
+                distributed += remaining;
+            }
+        }
+
+        totalSplitDistributed += distributed;
     }
 
     /**
@@ -446,7 +537,6 @@ contract LPMining is Ownable, ReentrancyGuard {
                 }
             }
 
-            // 重新计算大区和小区
             _recalculateAreas(current);
 
             current = leader.referrer;
@@ -456,7 +546,6 @@ contract LPMining is Ownable, ReentrancyGuard {
 
     /**
      * @dev 重新计算大区小区业绩
-     * 优化：限制遍历的直推数量
      */
     function _recalculateAreas(address _user) internal {
         address[] storage refs = referrals[_user];
@@ -471,7 +560,6 @@ contract LPMining is Ownable, ReentrancyGuard {
         uint256 maxArea = 0;
         uint256 totalArea = 0;
 
-        // 限制遍历数量，防止Gas过高
         uint256 limit = len > MAX_DIRECT_REFERRALS ? MAX_DIRECT_REFERRALS : len;
 
         for (uint256 i = 0; i < limit; i++) {
@@ -512,6 +600,11 @@ contract LPMining is Ownable, ReentrancyGuard {
             }
         }
 
+        // 验证推荐+团队最高比例不超过用户基础部分（65%）
+        uint256 totalReferral = referralLevel1 + referralLevel2 + referralLevel3;
+        uint256 maxTeamRate = _rates[_rates.length - 1];
+        require(totalReferral + maxTeamRate <= userBaseShare, "Referral + team rate exceeds user base share");
+
         teamLevelThresholds = _thresholds;
         teamLevelRates = _rates;
 
@@ -519,14 +612,113 @@ contract LPMining is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev 管理员转移LP（特殊权限）
-     * 注意：此功能允许管理员转移合约中的LP，存在中心化风险
-     * 建议：添加时间锁或多签机制
+     * @dev 设置35%分流地址和比例
+     * @param _addresses 分流地址数组
+     * @param _rates 对应比例数组（基数10000，总和应为10000）
+     */
+    function setSplitAddresses(
+        address[] calldata _addresses,
+        uint256[] calldata _rates
+    ) external onlyOwner {
+        require(_addresses.length == _rates.length, "Length mismatch");
+        require(_addresses.length <= 10, "Too many addresses"); // 最多10个分流地址
+
+        // 清空旧配置
+        delete splitAddresses;
+        totalSplitRate = 0;
+
+        // 添加新配置
+        for (uint256 i = 0; i < _addresses.length; i++) {
+            require(_addresses[i] != address(0), "Invalid address");
+            require(_rates[i] > 0, "Rate must be > 0");
+
+            splitAddresses.push(SplitAddress({
+                addr: _addresses[i],
+                rate: _rates[i]
+            }));
+            totalSplitRate += _rates[i];
+        }
+
+        emit SplitAddressUpdated(_addresses, _rates);
+    }
+
+    /**
+     * @dev 设置锁仓时长（仅管理员，无上限）
+     * @param _duration 锁仓时长（秒）
+     */
+    function setLockDuration(uint256 _duration) external onlyOwner {
+        uint256 oldDuration = lockDuration;
+        lockDuration = _duration;
+
+        emit LockDurationUpdated(oldDuration, _duration);
+    }
+
+    /**
+     * @dev 设置挖矿参数（仅管理员）
+     * @param _totalRewards 总奖励数量
+     * @param _miningDuration 挖矿周期（秒）
+     * 注意：修改后会重新计算每秒释放量和结束时间
+     */
+    function setMiningParams(uint256 _totalRewards, uint256 _miningDuration) external onlyOwner {
+        require(_totalRewards > 0, "Total rewards must be > 0");
+        require(_miningDuration > 0, "Duration must be > 0");
+        require(!miningEnded, "Mining already ended");
+
+        totalRewards = _totalRewards;
+        miningDuration = _miningDuration;
+        rewardPerSecond = _totalRewards / _miningDuration;
+        endTime = startTime + _miningDuration;
+
+        emit MiningParamsUpdated(_totalRewards, _miningDuration, rewardPerSecond);
+    }
+
+    /**
+     * @dev 设置收益分配比例（仅管理员）
+     * @param _userBaseShare 用户基础部分比例（基数10000）
+     * @param _splitShare 分流部分比例（基数10000）
+     * 注意：两者之和必须等于10000
+     */
+    function setDistributionRates(uint256 _userBaseShare, uint256 _splitShare) external onlyOwner {
+        require(_userBaseShare + _splitShare == DISTRIBUTION_BASE, "Must sum to 10000");
+        require(_userBaseShare > 0, "User share must be > 0");
+
+        userBaseShare = _userBaseShare;
+        splitShare = _splitShare;
+
+        emit DistributionRatesUpdated(_userBaseShare, _splitShare);
+    }
+
+    /**
+     * @dev 设置推荐奖励比例（仅管理员）
+     * @param _level1 1代推荐比例（基数10000）
+     * @param _level2 2代推荐比例（基数10000）
+     * @param _level3 3代推荐比例（基数10000）
+     */
+    function setReferralRates(uint256 _level1, uint256 _level2, uint256 _level3) external onlyOwner {
+        uint256 totalReferral = _level1 + _level2 + _level3;
+        require(totalReferral <= DISTRIBUTION_BASE, "Total rate too high");
+
+        // 验证推荐+团队最高比例不超过用户基础部分（65%）
+        uint256 maxTeamRate = teamLevelRates.length > 0 ? teamLevelRates[teamLevelRates.length - 1] : 0;
+        require(totalReferral + maxTeamRate <= userBaseShare, "Referral + team rate exceeds user base share");
+
+        referralLevel1 = _level1;
+        referralLevel2 = _level2;
+        referralLevel3 = _level3;
+
+        emit ReferralRatesUpdated(_level1, _level2, _level3);
+    }
+
+    /**
+     * @dev 管理员转移LP（仅限多余的LP，不能转移用户质押的LP）
      */
     function adminTransferLP(address _to, uint256 _amount) external onlyOwner {
         require(_to != address(0), "Invalid address");
         uint256 contractBalance = lpToken.balanceOf(address(this));
-        require(_amount <= contractBalance, "Insufficient LP");
+
+        // 只能转移多余的LP（合约余额 - 用户质押总量）
+        uint256 excessLP = contractBalance > totalStaked ? contractBalance - totalStaked : 0;
+        require(_amount <= excessLP, "Cannot transfer user staked LP");
 
         lpToken.safeTransfer(_to, _amount);
 
@@ -534,23 +726,12 @@ contract LPMining is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev 提取未分配的奖励池（仅限owner）
-     */
-    function withdrawUnallocated(address _to) external onlyOwner {
-        require(_to != address(0), "Invalid address");
-        uint256 amount = unallocatedPool;
-        require(amount > 0, "No unallocated rewards");
-
-        unallocatedPool = 0;
-        rewardToken.safeTransfer(_to, amount);
-    }
-
-    /**
-     * @dev 紧急提取（仅限owner）
+     * @dev 紧急提取
      */
     function emergencyWithdraw(address _token, uint256 _amount) external onlyOwner {
         IERC20(_token).safeTransfer(owner(), _amount);
     }
+
 
     // ============ 查询函数 ============
 
@@ -566,8 +747,8 @@ contract LPMining is Ownable, ReentrancyGuard {
             if (endTimestamp > lastRewardTime) {
                 uint256 duration = endTimestamp - lastRewardTime;
                 uint256 reward = duration * rewardPerSecond;
-                if (totalDistributed + reward > TOTAL_REWARDS) {
-                    reward = TOTAL_REWARDS - totalDistributed;
+                if (totalDistributed + reward > totalRewards) {
+                    reward = totalRewards - totalDistributed;
                 }
                 _accRewardPerShare += reward * 1e18 / totalStaked;
             }
@@ -590,7 +771,9 @@ contract LPMining is Ownable, ReentrancyGuard {
         uint256 referralCount,
         uint256 teamPerformance,
         uint256 smallAreaPerformance,
-        uint256 teamLevel
+        uint256 teamLevel,
+        uint256 unlockTime,
+        bool isLocked
     ) {
         UserInfo storage user = userInfo[_user];
         stakedAmount = user.amount;
@@ -603,6 +786,22 @@ contract LPMining is Ownable, ReentrancyGuard {
         teamPerformance = user.teamPerformance;
         smallAreaPerformance = user.smallAreaPerformance;
         teamLevel = _getTeamLevel(user.smallAreaPerformance);
+        unlockTime = user.unlockTime;
+        isLocked = block.timestamp < user.unlockTime;
+    }
+
+    /**
+     * @dev 查询用户锁仓状态
+     */
+    function getLockStatus(address _user) external view returns (
+        uint256 unlockTime,
+        uint256 remainingTime,
+        bool isLocked
+    ) {
+        UserInfo storage user = userInfo[_user];
+        unlockTime = user.unlockTime;
+        isLocked = block.timestamp < user.unlockTime;
+        remainingTime = isLocked ? user.unlockTime - block.timestamp : 0;
     }
 
     /**
@@ -661,6 +860,24 @@ contract LPMining is Ownable, ReentrancyGuard {
     }
 
     /**
+     * @dev 获取分流地址配置
+     */
+    function getSplitConfig() external view returns (
+        address[] memory addresses,
+        uint256[] memory rates
+    ) {
+        addresses = new address[](splitAddresses.length);
+        rates = new uint256[](splitAddresses.length);
+
+        for (uint256 i = 0; i < splitAddresses.length; i++) {
+            addresses[i] = splitAddresses[i].addr;
+            rates[i] = splitAddresses[i].rate;
+        }
+
+        return (addresses, rates);
+    }
+
+    /**
      * @dev 获取挖矿状态
      */
     function getMiningStatus() external view returns (
@@ -678,7 +895,7 @@ contract LPMining is Ownable, ReentrancyGuard {
             rewardPerSecond,
             startTime,
             endTime,
-            TOTAL_REWARDS - totalDistributed,
+            totalRewards - totalDistributed,
             miningEnded
         );
     }
@@ -686,10 +903,11 @@ contract LPMining is Ownable, ReentrancyGuard {
     /**
      * @dev 获取奖励分发统计
      */
-    function getBonusStats() external view returns (
-        uint256 _totalBonusDistributed,
-        uint256 _unallocatedPool
+    function getDistributionStats() external view returns (
+        uint256 _totalReferralDistributed,
+        uint256 _totalTeamDistributed,
+        uint256 _totalSplitDistributed
     ) {
-        return (totalBonusDistributed, unallocatedPool);
+        return (totalReferralDistributed, totalTeamDistributed, totalSplitDistributed);
     }
 }

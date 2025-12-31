@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMenu, FiX, FiExternalLink } from 'react-icons/fi';
+import { FiMenu, FiX, FiExternalLink, FiShield } from 'react-icons/fi';
 import { formatAddress } from '../utils/constants';
 
 // 新的 Logo 组件 - 金融科技风格
@@ -49,15 +49,21 @@ function Logo({ onClick }) {
   );
 }
 
-export default function Header({ account, isConnecting, isCorrectNetwork, onConnect, onSwitchNetwork, currentPage, onPageChange }) {
+export default function Header({ account, isConnecting, isCorrectNetwork, onConnect, onSwitchNetwork, currentPage, onPageChange, isAdmin }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navItems = [
+  // 基础导航项
+  const baseNavItems = [
     { id: 'home', label: '首页' },
     { id: 'lp-mining', label: 'LP挖矿' },
     { id: 'token-mining', label: '代币挖矿' },
     { id: 'referral', label: '推荐奖励' },
   ];
+
+  // 只有管理员才能看到管理菜单
+  const navItems = isAdmin
+    ? [...baseNavItems, { id: 'admin', label: '管理', icon: <FiShield className="w-4 h-4" /> }]
+    : baseNavItems;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
@@ -73,8 +79,9 @@ export default function Header({ account, isConnecting, isCorrectNetwork, onConn
                 <button
                   key={item.id}
                   onClick={() => onPageChange(item.id)}
-                  className={currentPage === item.id ? 'nav-link-active' : 'nav-link'}
+                  className={`flex items-center gap-1.5 ${currentPage === item.id ? 'nav-link-active' : 'nav-link'}`}
                 >
+                  {item.icon}
                   {item.label}
                 </button>
               ))}
@@ -148,8 +155,9 @@ export default function Header({ account, isConnecting, isCorrectNetwork, onConn
                     onPageChange(item.id);
                     setMobileMenuOpen(false);
                   }}
-                  className={`w-full text-left ${currentPage === item.id ? 'nav-link-active' : 'nav-link'}`}
+                  className={`w-full text-left flex items-center gap-2 ${currentPage === item.id ? 'nav-link-active' : 'nav-link'}`}
                 >
+                  {item.icon}
                   {item.label}
                 </button>
               ))}

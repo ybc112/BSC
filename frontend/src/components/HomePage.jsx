@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
-import { FiTrendingUp, FiUsers, FiDollarSign, FiZap, FiArrowRight, FiShield, FiAward, FiActivity, FiCheckCircle } from 'react-icons/fi';
+import { FiTrendingUp, FiUsers, FiDollarSign, FiZap, FiArrowRight, FiAward, FiActivity, FiCheckCircle } from 'react-icons/fi';
 import { formatNumber, MINING_CONFIG } from '../utils/constants';
 
-export default function HomePage({ onPageChange, lpMiningData, tokenMiningData }) {
+export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data }) {
   const stats = [
     {
       label: 'LP 矿池总质押',
@@ -13,7 +13,7 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningData }
     },
     {
       label: '代币矿池质押',
-      value: tokenMiningData?.miningStatus?.totalStaked || '0',
+      value: tokenMiningV2Data?.miningStatus?.totalStaked || '0',
       suffix: 'RWT',
       icon: <FiDollarSign className="w-5 h-5" />,
       color: 'gold',
@@ -26,8 +26,8 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningData }
       color: 'primary',
     },
     {
-      label: '代币年化收益',
-      value: tokenMiningData?.apy || MINING_CONFIG.TOKEN_MINING.APY,
+      label: '代币最高年化',
+      value: '365',
       suffix: '%',
       icon: <FiActivity className="w-5 h-5" />,
       color: 'gold',
@@ -46,9 +46,9 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningData }
     },
     {
       icon: <FiDollarSign className="w-7 h-7" />,
-      title: '代币质押挖矿',
+      title: '代币质押挖矿 V2',
       subtitle: '30% 代币分配',
-      description: '质押 RWT 代币，每日固定 0.5% 收益率，年化高达 182.5%',
+      description: '多档锁仓，收益更高！灵活质押146% APY，12个月锁仓365% APY',
       stats: '3000万 RWT',
       color: 'from-[#FFB800] to-[#FF8A00]',
       page: 'token-mining',
@@ -314,33 +314,6 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningData }
         </div>
       </section>
 
-      {/* Security Section */}
-      <section className="glass-premium p-8">
-        <div className="flex flex-col md:flex-row items-center gap-8">
-          <div className="flex-shrink-0">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#00D9A5]/20 to-[#00D9A5]/5 border border-[#00D9A5]/30 flex items-center justify-center glow-primary">
-              <FiShield className="w-10 h-10 text-[#00D9A5]" />
-            </div>
-          </div>
-          <div className="flex-1 text-center md:text-left">
-            <h3 className="text-2xl font-bold mb-2 text-white">安全可靠</h3>
-            <p className="text-white/50">
-              合约代码经过全面测试，覆盖率超过 97%。采用 OpenZeppelin 安全库，
-              具备重入攻击防护、溢出保护、权限控制等多重安全机制。
-            </p>
-          </div>
-          <div className="flex gap-8">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[#00D9A5]">103</div>
-              <div className="text-white/40 text-sm">测试用例</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-[#00D9A5]">97%</div>
-              <div className="text-white/40 text-sm">代码覆盖</div>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
