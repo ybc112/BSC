@@ -1,12 +1,12 @@
-// BSC Testnet 合约地址 (2025-12-31 更新 - V2版本)
+// BSC Testnet 合约地址 (2026-01-02 更新 - V2版本)
 export const CONTRACTS = {
   REWARD_TOKEN: '0x57E9cBF035776321F2A0d4AE74785FB56bD48e1B',
   LP_TOKEN: '0xf7839D5B542b6d278d42f61eeB5ca61127C2e652',
-  LP_MINING: '0x26BdE5cAcfe2b6Ad5084b690B2D9cF98CB426852',  // LPMiningV2 全参数可配置
+  LP_MINING: '0x7e9eDd989522F6f24dF47a6B9BFA9a04F9c6CE14',  // LPMiningV2 新版（含管理员转LP功能）
   TOKEN_MINING: '0x01e2F695b7fF307A07bD20F29Bc08f565dF2199A',
   // V2 合约
   PROJECT_TOKEN_V2: '0xa3C9744b4a3C986E01d81009134589FF67748435',  // ProjectTokenV2 带滑点
-  TOKEN_MINING_V2: '0x985E09F19DCCEe529a259ae4DD08D641399F4ea7',   // TokenMiningV2 多档锁仓
+  TOKEN_MINING_V2: '0x7011554695A29faa12eB4FA1437180D412326F4c',   // TokenMiningV2 随进随出 0.5%/天
   // 交易对
   TOKEN_V2_PAIR: '0xEFfBc0c8b7aad81c34bD9D7e8C93015EB0c0a968',    // ProjectTokenV2/WBNB LP
 };
@@ -53,15 +53,12 @@ export const MINING_CONFIG = {
     DAILY_RATE: 0.5, // 0.5%
     APY: 182.5, // 0.5% * 365
   },
-  // V2 代币挖矿 - 多档锁仓（APY = 日收益 × 365，与合约一致）
+  // V2 代币挖矿 - 随进随出 0.5%/天
   TOKEN_MINING_V2: {
     TOTAL_REWARDS: 30_000_000,
-    TIERS: {
-      FLEXIBLE: { duration: 0, dailyRate: 0.4, apy: 146 },      // 0.4% × 365 = 146%
-      THREE_MONTHS: { duration: 90, dailyRate: 0.6, apy: 219 }, // 0.6% × 365 = 219%
-      SIX_MONTHS: { duration: 180, dailyRate: 0.8, apy: 292 },  // 0.8% × 365 = 292%
-      TWELVE_MONTHS: { duration: 365, dailyRate: 1.0, apy: 365 }, // 1.0% × 365 = 365%
-    },
+    DAILY_RATE: 0.5, // 0.5%
+    APY: 182.5, // 0.5% * 365
+    LOCK_PERIOD: 0, // 无锁仓
   },
   // V2 代币 - 买卖滑点
   TOKEN_V2: {
@@ -78,22 +75,6 @@ export const MINING_CONFIG = {
     LEVEL2: { threshold: 5000, rate: 1.5 },
     LEVEL3: { threshold: 10000, rate: 2 },
   },
-};
-
-// 锁仓档位枚举（与合约保持一致）
-export const LOCK_TIERS = {
-  FLEXIBLE: 0,
-  THREE_MONTHS: 1,
-  SIX_MONTHS: 2,
-  TWELVE_MONTHS: 3,
-};
-
-// 锁仓档位名称
-export const LOCK_TIER_NAMES = {
-  0: '随进随出',
-  1: '3个月',
-  2: '6个月',
-  3: '12个月',
 };
 
 // APY计算工具 - 复利公式（仅供参考，实际显示使用合约的简单年化）

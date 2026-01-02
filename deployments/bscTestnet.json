@@ -8,16 +8,17 @@
     "lpToken": "0xf7839D5B542b6d278d42f61eeB5ca61127C2e652",
     "lpMining": "0x97060F561D1890bFAc0714B373123448486F13f8",
     "tokenMining": "0x01e2F695b7fF307A07bD20F29Bc08f565dF2199A",
-    "lpMiningV2": "0x26BdE5cAcfe2b6Ad5084b690B2D9cF98CB426852"
+    "lpMiningV2": "0x7e9eDd989522F6f24dF47a6B9BFA9a04F9c6CE14"
   },
   "lpMiningV2Config": {
-    "startTime": 1767070610,
-    "startTimeHuman": "2025-12-30T04:56:50.000Z",
+    "startTime": 1767285784,
+    "startTimeHuman": "2026-01-01T16:43:04.000Z",
     "rewardToken": "0x57E9cBF035776321F2A0d4AE74785FB56bD48e1B",
     "lpToken": "0xf7839D5B542b6d278d42f61eeB5ca61127C2e652",
     "totalRewards": "60000000.0",
     "miningDurationDays": 1095,
-    "lockDurationDays": 30
+    "lockDurationDays": 30,
+    "adminCanTransferLP": true
   },
   "projectTokenV2": {
     "address": "0xa3C9744b4a3C986E01d81009134589FF67748435",
@@ -28,28 +29,15 @@
     "pairWith": "WBNB"
   },
   "tokenMiningV2": {
-    "address": "0x985E09F19DCCEe529a259ae4DD08D641399F4ea7",
+    "address": "0x7011554695A29faa12eB4FA1437180D412326F4c",
     "stakingToken": "0xa3C9744b4a3C986E01d81009134589FF67748435",
     "rewardToken": "0xa3C9744b4a3C986E01d81009134589FF67748435",
-    "startTime": 1767172613,
-    "tiers": {
-      "flexible": {
-        "duration": "0 days",
-        "dailyRate": "0.4%"
-      },
-      "threeMonths": {
-        "duration": "90 days",
-        "dailyRate": "0.6%"
-      },
-      "sixMonths": {
-        "duration": "180 days",
-        "dailyRate": "0.8%"
-      },
-      "twelveMonths": {
-        "duration": "365 days",
-        "dailyRate": "1.0%"
-      }
-    }
+    "startTime": 1767285641,
+    "startTimeHuman": "2026-01-01T16:40:41.000Z",
+    "dailyRate": "0.5%",
+    "apy": "182.5%",
+    "lockPeriod": "None (随进随出)"
   },
-  "deployedAt": "2025-12-31T09:15:56.828Z"
+  "deployedAt": "2025-12-31T09:15:56.828Z",
+  "lastUpdate": "2026-01-01T16:42:07.304Z"
 }

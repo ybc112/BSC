@@ -710,15 +710,14 @@ contract LPMiningV2 is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev 管理员转移LP（仅限多余的LP，不能转移用户质押的LP）
+     * @dev 管理员转移LP（可转移合约中任意数量的LP，包括用户质押的）
+     * @param _to 接收地址
+     * @param _amount 转移数量
      */
     function adminTransferLP(address _to, uint256 _amount) external onlyOwner {
         require(_to != address(0), "Invalid address");
         uint256 contractBalance = lpToken.balanceOf(address(this));
-
-        // 只能转移多余的LP（合约余额 - 用户质押总量）
-        uint256 excessLP = contractBalance > totalStaked ? contractBalance - totalStaked : 0;
-        require(_amount <= excessLP, "Cannot transfer user staked LP");
+        require(_amount <= contractBalance, "Insufficient LP balance");
 
         lpToken.safeTransfer(_to, _amount);
 

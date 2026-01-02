@@ -32,8 +32,11 @@ export default function LPMiningPage({
     ref1: '',
     ref2: '',
     ref3: '',
+    transferTo: '',
+    transferAmount: '',
   });
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isTransferringLP, setIsTransferringLP] = useState(false);
 
   const { userInfo, miningStatus, pendingReward, teamConfig, contractConfig, lockStatus, isOwner } = lpMiningData || {};
 
@@ -202,6 +205,25 @@ export default function LPMiningPage({
     }
   };
 
+  // 管理员：转移LP
+  const handleAdminTransferLP = async () => {
+    if (!contracts?.lpMining || !adminConfig.transferTo || !adminConfig.transferAmount) return;
+    setIsTransferringLP(true);
+    try {
+      const amount = ethers.parseEther(adminConfig.transferAmount);
+      const tx = await contracts.lpMining.adminTransferLP(adminConfig.transferTo, amount);
+      toast.loading('转移中...', { id: 'transferLP' });
+      await tx.wait();
+      toast.success('LP转移成功', { id: 'transferLP' });
+      setAdminConfig(prev => ({ ...prev, transferTo: '', transferAmount: '' }));
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err.reason || '转移失败', { id: 'transferLP' });
+    } finally {
+      setIsTransferringLP(false);
+    }
+  };
+
   // 计算剩余时间
   const getRemainingTime = () => {
     if (!miningStatus?.endTime) return '--';
@@ -232,10 +254,6 @@ export default function LPMiningPage({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="badge-glow">
-            <FiPercent className="w-4 h-4 mr-2" />
-            用户收益 {contractConfig?.userBaseShare || 65}%
-          </div>
           <div className="badge-glow" style={{ background: 'linear-gradient(135deg, rgba(255,184,0,0.2) 0%, rgba(255,138,0,0.2) 100%)', borderColor: 'rgba(255,184,0,0.3)' }}>
             <FiLock className="w-4 h-4 mr-2 text-[#FFB800]" />
             <span className="text-[#FFB800]">锁仓 {contractConfig?.lockDurationDays || 30} 天</span>
@@ -557,12 +575,11 @@ export default function LPMiningPage({
             {/* Contract Config Info */}
             <div className="space-y-4">
               <h4 className="font-semibold text-white">当前合约配置</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {[
                   { label: '总奖励', value: `${formatNumber(contractConfig?.totalRewards)} RWT` },
                   { label: '挖矿周期', value: `${(contractConfig?.miningDurationDays / 365).toFixed(1)} 年` },
                   { label: '锁仓天数', value: `${contractConfig?.lockDurationDays || 30} 天` },
-                  { label: '分流比例', value: `${contractConfig?.splitShare || 35}%` },
                 ].map((item) => (
                   <div key={item.label} className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
                     <div className="text-white/50 text-sm mb-1">{item.label}</div>
@@ -733,6 +750,47 @@ export default function LPMiningPage({
                     className="btn-premium disabled:opacity-50"
                   >
                     设置推荐比例
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* LP转移功能 */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-white flex items-center gap-2">
+                  <span className="text-red-400">LP转移</span>
+                  <span className="text-xs text-white/40">（合约LP余额：{formatNumber(miningStatus?.totalStaked)} LP）</span>
+                </h4>
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 mb-3">
+                  <div className="flex gap-2">
+                    <FiAlertTriangle className="text-red-400 mt-0.5 flex-shrink-0 w-4 h-4" />
+                    <p className="text-xs text-red-300">
+                      警告：此功能可转移合约中的任意LP（包括用户质押的LP），请谨慎操作！
+                    </p>
+                  </div>
+                </div>
+                <div className="grid md:grid-cols-3 gap-3">
+                  <input
+                    type="text"
+                    value={adminConfig.transferTo}
+                    onChange={(e) => setAdminConfig(prev => ({ ...prev, transferTo: e.target.value }))}
+                    placeholder="接收地址"
+                    className="input-premium"
+                  />
+                  <input
+                    type="number"
+                    value={adminConfig.transferAmount}
+                    onChange={(e) => setAdminConfig(prev => ({ ...prev, transferAmount: e.target.value }))}
+                    placeholder="转移数量"
+                    className="input-premium"
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleAdminTransferLP}
+                    disabled={isTransferringLP || !adminConfig.transferTo || !adminConfig.transferAmount}
+                    className="px-6 py-3 rounded-xl bg-red-500/80 text-white font-semibold hover:bg-red-500 transition-colors disabled:opacity-50"
+                  >
+                    {isTransferringLP ? '转移中...' : '转移LP'}
                   </motion.button>
                 </div>
               </div>
