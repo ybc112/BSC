@@ -21,7 +21,16 @@ export const NETWORKS = {
       symbol: 'tBNB',
       decimals: 18,
     },
-    rpcUrls: ['https://bsc-testnet-rpc.publicnode.com'],
+    rpcUrls: [
+      'https://data-seed-prebsc-1-s1.binance.org:8545/',
+      'https://data-seed-prebsc-2-s1.binance.org:8545/',
+      'https://data-seed-prebsc-1-s2.binance.org:8545/',
+      'https://data-seed-prebsc-2-s2.binance.org:8545/',
+      'https://data-seed-prebsc-1-s3.binance.org:8545/',
+      'https://bsc-testnet.publicnode.com',
+      'https://endpoints.omniatech.io/v1/bsc/testnet/public',
+      'https://bsc-testnet.blockpi.network/v1/rpc/public'
+    ],
     blockExplorerUrls: ['https://testnet.bscscan.com'],
   },
   BSC_MAINNET: {
@@ -32,7 +41,13 @@ export const NETWORKS = {
       symbol: 'BNB',
       decimals: 18,
     },
-    rpcUrls: ['https://bsc-dataseed.binance.org/'],
+    rpcUrls: [
+      'https://bsc-dataseed.binance.org/',
+      'https://bsc-dataseed1.binance.org/',
+      'https://bsc-dataseed2.binance.org/',
+      'https://bsc.publicnode.com',
+      'https://bsc.blockpi.network/v1/rpc/public'
+    ],
     blockExplorerUrls: ['https://bscscan.com'],
   },
 };

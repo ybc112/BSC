@@ -38,15 +38,17 @@ function App() {
   const tokenMiningV2Data = useTokenMiningV2(contracts.tokenMiningV2, account);
 
   const { balance: lpBalance, refetch: refetchLpBalance } = useTokenBalance(contracts.lpToken, account);
-  const { balance: tokenBalance, refetch: refetchTokenBalance } = useTokenBalance(contracts.rewardToken, account);
+  // TokenMiningV2 质押的是 ProjectTokenV2 代币，不是 rewardToken
+  const { balance: tokenBalance, refetch: refetchTokenBalance } = useTokenBalance(contracts.projectTokenV2, account);
 
   const { allowance: lpAllowance, refetch: refetchLpAllowance } = useAllowance(
     contracts.lpToken,
     account,
     CONTRACTS.LP_MINING
   );
+  // TokenMiningV2 需要授权 ProjectTokenV2 代币
   const { allowance: tokenAllowance, refetch: refetchTokenAllowance } = useAllowance(
-    contracts.rewardToken,
+    contracts.projectTokenV2,
     account,
     CONTRACTS.TOKEN_MINING_V2
   );

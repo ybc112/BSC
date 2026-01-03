@@ -65,12 +65,12 @@ export default function TokenMiningPage({
 
   const needsApproval = parseFloat(tokenAllowance) < parseFloat(depositAmount || '0');
 
-  // 授权
+  // 授权 - TokenMiningV2 使用 ProjectTokenV2 代币
   const handleApprove = async () => {
-    if (!contracts?.rewardToken) return;
+    if (!contracts?.projectTokenV2) return;
     setIsApproving(true);
     try {
-      const tx = await contracts.rewardToken.approve(CONTRACTS.TOKEN_MINING_V2, ethers.MaxUint256);
+      const tx = await contracts.projectTokenV2.approve(CONTRACTS.TOKEN_MINING_V2, ethers.MaxUint256);
       toast.loading('授权中...', { id: 'approve' });
       await tx.wait();
       toast.success('授权成功', { id: 'approve' });

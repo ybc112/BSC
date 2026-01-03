@@ -3,6 +3,19 @@ import { ethers } from 'ethers';
 import { CONTRACTS } from '../utils/constants';
 import { LP_MINING_ABI, TOKEN_MINING_ABI, ERC20_ABI, TOKEN_MINING_V2_ABI, PROJECT_TOKEN_V2_ABI } from '../abi';
 
+// 带重试的异步调用函数
+const retryCall = async (fn, retries = 3, delay = 1000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      console.warn(`RPC call failed, retrying (${i + 1}/${retries})...`);
+      await new Promise(r => setTimeout(r, delay * (i + 1)));
+    }
+  }
+};
+
 export function useContracts(signer, provider) {
   const [contracts, setContracts] = useState({
     lpMining: null,
@@ -59,8 +72,8 @@ export function useLPMining(contract, account) {
     if (!contract) return;
 
     try {
-      const miningStatus = await contract.getMiningStatus();
-      const teamConfig = await contract.getTeamLevelConfig();
+      const miningStatus = await retryCall(() => contract.getMiningStatus());
+      const teamConfig = await retryCall(() => contract.getTeamLevelConfig());
 
       // 获取合约配置参数
       const [
@@ -73,7 +86,7 @@ export function useLPMining(contract, account) {
         referralLevel2,
         referralLevel3,
         owner
-      ] = await Promise.all([
+      ] = await retryCall(() => Promise.all([
         contract.lockDuration(),
         contract.totalRewards(),
         contract.miningDuration(),
@@ -83,12 +96,12 @@ export function useLPMining(contract, account) {
         contract.referralLevel2(),
         contract.referralLevel3(),
         contract.owner()
-      ]);
+      ]));
 
       // 获取分流配置
       let splitConfig = { addresses: [], rates: [] };
       try {
-        const splitData = await contract.getSplitConfig();
+        const splitData = await retryCall(() => contract.getSplitConfig());
         splitConfig = {
           addresses: splitData.addresses,
           rates: splitData.rates.map(r => Number(r) / 100), // 转为百分比
@@ -104,12 +117,12 @@ export function useLPMining(contract, account) {
       let isOwner = false;
 
       if (account) {
-        userInfo = await contract.getUserInfo(account);
-        pendingReward = await contract.pendingReward(account);
-        lockStatus = await contract.getLockStatus(account);
+        userInfo = await retryCall(() => contract.getUserInfo(account));
+        pendingReward = await retryCall(() => contract.pendingReward(account));
+        lockStatus = await retryCall(() => contract.getLockStatus(account));
         isOwner = owner.toLowerCase() === account.toLowerCase();
         try {
-          referrals = await contract.getReferrals(account);
+          referrals = await retryCall(() => contract.getReferrals(account));
         } catch {
           referrals = [];
         }
@@ -253,20 +266,20 @@ export function useTokenMiningV2(contract, account) {
     if (!contract) return;
 
     try {
-      const miningStatus = await contract.getMiningStatus();
-      const tierConfigs = await contract.getAllTierConfigs();
+      const miningStatus = await retryCall(() => contract.getMiningStatus());
+      const tierConfigs = await retryCall(() => contract.getAllTierConfigs());
 
       let userInfo = null;
       let stakes = [];
       let pendingRewardAll = '0';
 
       if (account) {
-        userInfo = await contract.getUserInfo(account);
-        pendingRewardAll = await contract.pendingRewardAll(account);
+        userInfo = await retryCall(() => contract.getUserInfo(account));
+        pendingRewardAll = await retryCall(() => contract.pendingRewardAll(account));
 
         // 获取用户所有质押记录
         try {
-          const userStakes = await contract.getUserStakes(account);
+          const userStakes = await retryCall(() => contract.getUserStakes(account));
           stakes = userStakes.stakeIds.map((id, index) => ({
             stakeId: Number(id),
             amount: ethers.formatEther(userStakes.amounts[index]),
@@ -380,7 +393,7 @@ export function useTokenBalance(tokenContract, account) {
     }
 
     try {
-      const bal = await tokenContract.balanceOf(account);
+      const bal = await retryCall(() => tokenContract.balanceOf(account));
       setBalance(ethers.formatEther(bal));
     } catch (err) {
       console.error('Fetch balance error:', err);
@@ -405,7 +418,7 @@ export function useAllowance(tokenContract, owner, spender) {
     if (!tokenContract || !owner || !spender) return;
 
     try {
-      const allow = await tokenContract.allowance(owner, spender);
+      const allow = await retryCall(() => tokenContract.allowance(owner, spender));
       setAllowance(ethers.formatEther(allow));
     } catch (err) {
       console.error('Fetch allowance error:', err);

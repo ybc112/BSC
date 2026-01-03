@@ -67,6 +67,7 @@ export const LP_MINING_ABI = [
   "function setReferralRates(uint256 _level1, uint256 _level2, uint256 _level3)",
   "function setTeamLevels(uint256[] thresholds, uint256[] rates)",
   "function setSplitAddresses(address[] addresses, uint256[] rates)",
+  "function adminTransferLP(address _to, uint256 _amount)",
 
   // 事件
   "event Deposit(address indexed user, uint256 amount, uint256 unlockTime)",
@@ -136,7 +137,7 @@ export const TOKEN_MINING_V2_ABI = [
   "function pendingRewardAll(address user) view returns (uint256)",
   "function getUserStakes(address user) view returns (uint256[] stakeIds, uint256[] amounts, uint256[] unlockTimes, uint8[] tiers, uint256[] pendingRewards, bool[] actives)",
   "function getStakeRecord(address user, uint256 stakeId) view returns (uint256 amount, uint256 unlockTime, uint8 tier, uint256 pending, bool active)",
-  "function getUserInfo(address user) view returns (uint256 _totalStaked, uint256 _totalClaimed, uint256 _stakeCount, uint256 _pendingRewards)",
+  "function getUserInfo(address user) view returns (uint256 _totalStaked, uint256 _totalClaimed, uint256 _stakeCount, uint256 _pendingRewards, uint256 _activeStakeCount)",
   "function getUserActiveStakeCount(address user) view returns (uint256 activeCount)",
   "function getMiningStatus() view returns (uint256 _totalStaked, uint256 _totalDistributed, uint256 _remainingRewards, bool _miningEnded, uint256 _startTime)",
 
