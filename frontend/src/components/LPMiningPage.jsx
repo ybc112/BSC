@@ -298,7 +298,7 @@ export default function LPMiningPage({
               <span className="text-white/40 text-sm">{stat.label}</span>
             </div>
             <div className="text-2xl font-bold text-white">
-              {typeof stat.value === 'string' ? stat.value : formatNumber(stat.value)}
+              {stat.label === '剩余时间' ? stat.value : formatNumber(stat.value)}
               {stat.suffix && <span className="text-white/40 text-sm ml-1">{stat.suffix}</span>}
             </div>
           </motion.div>

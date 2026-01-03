@@ -6,7 +6,7 @@ export const CONTRACTS = {
   TOKEN_MINING: '0x01e2F695b7fF307A07bD20F29Bc08f565dF2199A',
   // V2 合约
   PROJECT_TOKEN_V2: '0xa3C9744b4a3C986E01d81009134589FF67748435',  // ProjectTokenV2 带滑点
-  TOKEN_MINING_V2: '0x7011554695A29faa12eB4FA1437180D412326F4c',   // TokenMiningV2 随进随出 0.5%/天
+  TOKEN_MINING_V2: '0xC53B32D650ec48212b1a85c3FA8DB1505482A156',   // TokenMiningV2 多档锁仓版本
   // 交易对
   TOKEN_V2_PAIR: '0xEFfBc0c8b7aad81c34bD9D7e8C93015EB0c0a968',    // ProjectTokenV2/WBNB LP
 };
@@ -97,11 +97,14 @@ export const calculateSimpleAPY = (dailyRate) => {
 
 // 格式化工具
 export const formatNumber = (num, decimals = 2) => {
-  if (num === undefined || num === null) return '0';
+  if (num === undefined || num === null || num === '') return '0';
   const n = parseFloat(num);
+  if (isNaN(n)) return '0';
   if (n >= 1e9) return (n / 1e9).toFixed(decimals) + 'B';
   if (n >= 1e6) return (n / 1e6).toFixed(decimals) + 'M';
   if (n >= 1e3) return (n / 1e3).toFixed(decimals) + 'K';
+  // 小于1000的数字，最多显示4位小数
+  if (n < 1) return n.toFixed(Math.min(decimals + 2, 6));
   return n.toFixed(decimals);
 };
 

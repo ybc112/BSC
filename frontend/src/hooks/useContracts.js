@@ -238,14 +238,14 @@ export function useTokenMining(contract, account) {
   return { ...data, refetch: fetchData };
 }
 
-// TokenMiningV2 Hook - 随进随出挖矿（0.5%/天）
+// TokenMiningV2 Hook - 多档锁仓挖矿
 export function useTokenMiningV2(contract, account) {
   const [data, setData] = useState({
     userInfo: null,
+    stakes: [],
     miningStatus: null,
-    pendingReward: '0',
-    dailyRate: 0,
-    apy: 0,
+    tierConfigs: null,
+    pendingRewardAll: '0',
     loading: true,
   });
 
@@ -254,24 +254,42 @@ export function useTokenMiningV2(contract, account) {
 
     try {
       const miningStatus = await contract.getMiningStatus();
-      const dailyRate = await contract.dailyRate();
-      const apy = await contract.getAPY();
+      const tierConfigs = await contract.getAllTierConfigs();
 
       let userInfo = null;
-      let pendingReward = '0';
+      let stakes = [];
+      let pendingRewardAll = '0';
 
       if (account) {
         userInfo = await contract.getUserInfo(account);
-        pendingReward = await contract.pendingReward(account);
+        pendingRewardAll = await contract.pendingRewardAll(account);
+
+        // 获取用户所有质押记录
+        try {
+          const userStakes = await contract.getUserStakes(account);
+          stakes = userStakes.stakeIds.map((id, index) => ({
+            stakeId: Number(id),
+            amount: ethers.formatEther(userStakes.amounts[index]),
+            unlockTime: Number(userStakes.unlockTimes[index]),
+            tier: Number(userStakes.tiers[index]),
+            pendingReward: ethers.formatEther(userStakes.pendingRewards[index]),
+            active: userStakes.actives[index],
+          })).filter(s => s.active);
+        } catch (err) {
+          console.error('Fetch stakes error:', err);
+          stakes = [];
+        }
       }
 
       setData({
         userInfo: userInfo ? {
-          stakedAmount: ethers.formatEther(userInfo.stakedAmount),
-          pendingRewards: ethers.formatEther(userInfo.pendingRewards),
-          totalClaimed: ethers.formatEther(userInfo.totalClaimed),
-          dailyReward: ethers.formatEther(userInfo.dailyReward),
+          totalStaked: ethers.formatEther(userInfo._totalStaked),
+          totalClaimed: ethers.formatEther(userInfo._totalClaimed),
+          stakeCount: Number(userInfo._stakeCount),
+          pendingRewards: ethers.formatEther(userInfo._pendingRewards),
+          activeStakeCount: Number(userInfo._activeStakeCount || 0),
         } : null,
+        stakes,
         miningStatus: {
           totalStaked: ethers.formatEther(miningStatus._totalStaked),
           totalDistributed: ethers.formatEther(miningStatus._totalDistributed),
@@ -279,9 +297,12 @@ export function useTokenMiningV2(contract, account) {
           miningEnded: miningStatus._miningEnded,
           startTime: Number(miningStatus._startTime),
         },
-        pendingReward: ethers.formatEther(pendingReward),
-        dailyRate: Number(dailyRate) / 100, // 转为百分比 0.5
-        apy: Number(apy) / 100, // 转为百分比 182.5
+        tierConfigs: {
+          durations: tierConfigs.durations.map(d => Number(d) / 86400), // 秒转天
+          dailyRates: tierConfigs.dailyRates.map(r => Number(r) / 100), // 转为百分比
+          annualAPYs: tierConfigs.annualAPYs.map(a => Number(a) / 100),
+        },
+        pendingRewardAll: ethers.formatEther(pendingRewardAll),
         loading: false,
       });
     } catch (err) {

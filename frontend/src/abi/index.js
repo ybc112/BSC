@@ -67,8 +67,6 @@ export const LP_MINING_ABI = [
   "function setReferralRates(uint256 _level1, uint256 _level2, uint256 _level3)",
   "function setTeamLevels(uint256[] thresholds, uint256[] rates)",
   "function setSplitAddresses(address[] addresses, uint256[] rates)",
-  "function adminTransferLP(address _to, uint256 _amount)",
-  "function emergencyWithdraw(address _token, uint256 _amount)",
 
   // 事件
   "event Deposit(address indexed user, uint256 amount, uint256 unlockTime)",
@@ -117,7 +115,7 @@ export const TOKEN_MINING_ABI = [
   "event MiningEnded(uint256 totalDistributed)"
 ];
 
-// TokenMiningV2 ABI - 随进随出挖矿（0.5%/天）
+// TokenMiningV2 ABI - 多档锁仓挖矿
 export const TOKEN_MINING_V2_ABI = [
   // 读取函数
   "function stakingToken() view returns (address)",
@@ -127,33 +125,43 @@ export const TOKEN_MINING_V2_ABI = [
   "function startTime() view returns (uint256)",
   "function miningEnded() view returns (bool)",
   "function totalRewards() view returns (uint256)",
-  "function dailyRate() view returns (uint256)",
   "function RATE_BASE() view returns (uint256)",
   "function SECONDS_PER_DAY() view returns (uint256)",
   "function owner() view returns (address)",
 
   // 用户信息
-  "function userInfo(address) view returns (uint256 amount, uint256 lastUpdateTime, uint256 pendingRewards, uint256 totalClaimed)",
-  "function pendingReward(address user) view returns (uint256)",
-  "function getUserInfo(address user) view returns (uint256 stakedAmount, uint256 pendingRewards, uint256 totalClaimed, uint256 dailyReward)",
+  "function userInfo(address) view returns (uint256 totalStaked, uint256 totalClaimed, uint256 stakeCount)",
+  "function stakeRecords(address, uint256) view returns (uint256 amount, uint256 lastUpdateTime, uint256 pendingRewards, uint256 unlockTime, uint8 tier, bool active)",
+  "function pendingReward(address user, uint256 stakeId) view returns (uint256)",
+  "function pendingRewardAll(address user) view returns (uint256)",
+  "function getUserStakes(address user) view returns (uint256[] stakeIds, uint256[] amounts, uint256[] unlockTimes, uint8[] tiers, uint256[] pendingRewards, bool[] actives)",
+  "function getStakeRecord(address user, uint256 stakeId) view returns (uint256 amount, uint256 unlockTime, uint8 tier, uint256 pending, bool active)",
+  "function getUserInfo(address user) view returns (uint256 _totalStaked, uint256 _totalClaimed, uint256 _stakeCount, uint256 _pendingRewards)",
+  "function getUserActiveStakeCount(address user) view returns (uint256 activeCount)",
   "function getMiningStatus() view returns (uint256 _totalStaked, uint256 _totalDistributed, uint256 _remainingRewards, bool _miningEnded, uint256 _startTime)",
-  "function getAPY() view returns (uint256)",
+
+  // 档位配置
+  "function tierConfigs(uint8) view returns (uint256 duration, uint256 dailyRate)",
+  "function getTierConfig(uint8 tier) view returns (uint256 duration, uint256 dailyRate, uint256 annualAPY)",
+  "function getAllTierConfigs() view returns (uint256[4] durations, uint256[4] dailyRates, uint256[4] annualAPYs)",
 
   // 写入函数
-  "function deposit(uint256 amount)",
-  "function withdraw(uint256 amount)",
-  "function claim()",
+  "function deposit(uint256 amount, uint8 tier)",
+  "function withdraw(uint256 stakeId)",
+  "function claim(uint256 stakeId)",
+  "function claimAll()",
 
   // 管理员函数
-  "function setDailyRate(uint256 _dailyRate)",
+  "function setTierConfig(uint8 tier, uint256 duration, uint256 dailyRate)",
   "function setTotalRewards(uint256 _totalRewards)",
   "function emergencyWithdraw(address token, uint256 amount)",
 
   // 事件
-  "event Deposit(address indexed user, uint256 amount)",
-  "event Withdraw(address indexed user, uint256 amount)",
-  "event Claim(address indexed user, uint256 amount)",
-  "event DailyRateUpdated(uint256 oldRate, uint256 newRate)",
+  "event Deposit(address indexed user, uint256 indexed stakeId, uint256 amount, uint8 tier, uint256 unlockTime)",
+  "event Withdraw(address indexed user, uint256 indexed stakeId, uint256 amount)",
+  "event Claim(address indexed user, uint256 indexed stakeId, uint256 amount)",
+  "event ClaimAll(address indexed user, uint256 amount)",
+  "event TierConfigUpdated(uint8 tier, uint256 duration, uint256 dailyRate)",
   "event MiningEnded(uint256 totalDistributed)"
 ];
 

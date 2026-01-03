@@ -29,15 +29,35 @@
     "pairWith": "WBNB"
   },
   "tokenMiningV2": {
-    "address": "0x7011554695A29faa12eB4FA1437180D412326F4c",
+    "address": "0xC53B32D650ec48212b1a85c3FA8DB1505482A156",
     "stakingToken": "0xa3C9744b4a3C986E01d81009134589FF67748435",
     "rewardToken": "0xa3C9744b4a3C986E01d81009134589FF67748435",
-    "startTime": 1767285641,
-    "startTimeHuman": "2026-01-01T16:40:41.000Z",
-    "dailyRate": "0.5%",
-    "apy": "182.5%",
-    "lockPeriod": "None (随进随出)"
+    "startTime": 1767419530,
+    "startTimeHuman": "2026-01-03T05:52:10.000Z",
+    "version": "Multi-Tier",
+    "tiers": {
+      "flexible": {
+        "dailyRate": "0.4%",
+        "apy": "146%",
+        "lockDays": 0
+      },
+      "threeMonths": {
+        "dailyRate": "0.6%",
+        "apy": "219%",
+        "lockDays": 90
+      },
+      "sixMonths": {
+        "dailyRate": "0.8%",
+        "apy": "292%",
+        "lockDays": 180
+      },
+      "twelveMonths": {
+        "dailyRate": "1.0%",
+        "apy": "365%",
+        "lockDays": 365
+      }
+    }
   },
   "deployedAt": "2025-12-31T09:15:56.828Z",
-  "lastUpdate": "2026-01-01T16:42:07.304Z"
+  "lastUpdate": "2026-01-03T05:51:17.254Z"
 }
