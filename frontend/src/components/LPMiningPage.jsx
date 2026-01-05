@@ -459,13 +459,13 @@ export default function LPMiningPage({
               我的收益
             </h2>
 
-            {/* Pending Reward */}
+            {/* Pending Reward - 显示用户实际到手金额 */}
             <div className="relative p-6 rounded-2xl mb-6 overflow-hidden bg-gradient-to-br from-[#1A2332] to-[#111827] border border-white/5">
               <div className="absolute inset-0 bg-gradient-to-br from-[#00D9A5]/5 to-[#FFB800]/5" />
               <div className="relative text-center">
                 <div className="text-white/50 text-sm mb-2">待领取收益</div>
                 <div className="text-4xl md:text-5xl font-bold text-gradient-premium mb-1">
-                  {formatNumber(pendingReward, 4)}
+                  {formatNumber(parseFloat(pendingReward || 0) * (contractConfig?.userBaseShare || 65) / 100, 4)}
                 </div>
                 <div className="text-white/40">RWT</div>
               </div>
