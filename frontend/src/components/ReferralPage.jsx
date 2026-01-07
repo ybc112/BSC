@@ -648,7 +648,7 @@ export default function ReferralPage({
                       className="flex items-center gap-1 text-[#00D9A5] hover:text-[#00FFB8] transition-colors"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <span className="text-sm hidden sm:inline">查看</span>
+                      <span className="text-sm hidden sm:inline">{t('referral.view')}</span>
                       <FiExternalLink className="w-4 h-4" />
                     </a>
                   </motion.div>
@@ -771,7 +771,7 @@ export default function ReferralPage({
                   <div>
                     <span className="font-mono text-white">{formatAddress(member.address)}</span>
                     <div className="text-xs text-white/40">
-                      上级: {formatAddress(member.parent)}
+                      {t('referral.superior')}: {formatAddress(member.parent)}
                     </div>
                   </div>
                 </div>
@@ -781,7 +781,7 @@ export default function ReferralPage({
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[#FFB800] hover:text-[#FFCC00] transition-colors"
                 >
-                  <span className="text-sm hidden sm:inline">查看</span>
+                  <span className="text-sm hidden sm:inline">{t('referral.view')}</span>
                   <FiExternalLink className="w-4 h-4" />
                 </a>
               </motion.div>
@@ -803,7 +803,7 @@ export default function ReferralPage({
                   <div>
                     <span className="font-mono text-white">{formatAddress(member.address)}</span>
                     <div className="text-xs text-white/40">
-                      上级: {formatAddress(member.parent)} | 上上级: {formatAddress(member.grandParent)}
+                      {t('referral.superior')}: {formatAddress(member.parent)} | {t('referral.grandSuperior')}: {formatAddress(member.grandParent)}
                     </div>
                   </div>
                 </div>
@@ -813,7 +813,7 @@ export default function ReferralPage({
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[#FF6B6B] hover:text-[#FF8A8A] transition-colors"
                 >
-                  <span className="text-sm hidden sm:inline">查看</span>
+                  <span className="text-sm hidden sm:inline">{t('referral.view')}</span>
                   <FiExternalLink className="w-4 h-4" />
                 </a>
               </motion.div>
@@ -827,7 +827,7 @@ export default function ReferralPage({
                   disabled={loadingTeam}
                   className="px-6 py-2 rounded-xl bg-white/10 text-white/70 hover:bg-white/20 transition-colors disabled:opacity-50"
                 >
-                  {loadingTeam ? '加载中...' : `加载更多 (${teamStats.level1}/${level1Page.total})`}
+                  {loadingTeam ? t('common.loading') : `${t('referral.loadMore')} (${teamStats.level1}/${level1Page.total})`}
                 </button>
               </div>
             )}
@@ -847,7 +847,7 @@ export default function ReferralPage({
         >
           <span className="font-semibold flex items-center gap-2 text-white">
             <FiGift className="w-5 h-5 text-[#00D9A5]" />
-            奖励规则说明
+            {t('referral.rewardRules')}
           </span>
           {showRules ? <FiChevronUp className="text-white/50" /> : <FiChevronDown className="text-white/50" />}
         </button>
@@ -861,13 +861,13 @@ export default function ReferralPage({
               <div className="space-y-4">
                 <h4 className="font-semibold text-[#00D9A5] flex items-center gap-2">
                   <FiGift className="w-4 h-4" />
-                  推荐奖励 (从35%奖励池分配)
+                  {t('referral.referralRewardTitle')}
                 </h4>
                 <div className="space-y-2">
                   {[
-                    { level: '1代推荐人', rate: '20%', total: '总收益的 7%' },
-                    { level: '2代推荐人', rate: '10%', total: '总收益的 3.5%' },
-                    { level: '3代推荐人', rate: '5%', total: '总收益的 1.75%' },
+                    { level: t('lpMining.level1Referrer'), rate: '20%', total: t('referral.level1Rate') },
+                    { level: t('lpMining.level2Referrer'), rate: '10%', total: t('referral.level2Rate') },
+                    { level: t('lpMining.level3Referrer'), rate: '5%', total: t('referral.level3Rate') },
                   ].map((item) => (
                     <div key={item.level} className="flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/5">
                       <span className="text-white/60">{item.level}</span>
@@ -884,25 +884,25 @@ export default function ReferralPage({
               <div className="space-y-4">
                 <h4 className="font-semibold text-[#FFB800] flex items-center gap-2">
                   <FiAward className="w-4 h-4" />
-                  团队奖励 (极差制)
+                  {t('referral.teamRewardTitle')}
                 </h4>
                 <div className="space-y-2 text-sm text-white/70">
                   <div className="p-3 rounded-xl bg-white/5 border border-white/5">
                     <div className="flex items-start gap-2">
                       <span className="text-[#FFB800] mt-0.5">1.</span>
-                      <span>根据小区业绩确定您的团队等级</span>
+                      <span>{t('referral.teamRule1')}</span>
                     </div>
                   </div>
                   <div className="p-3 rounded-xl bg-white/5 border border-white/5">
                     <div className="flex items-start gap-2">
                       <span className="text-[#FFB800] mt-0.5">2.</span>
-                      <span>上级只获得与下级的等级差额奖励（极差制）</span>
+                      <span>{t('referral.teamRule2')}</span>
                     </div>
                   </div>
                   <div className="p-3 rounded-xl bg-white/5 border border-white/5">
                     <div className="flex items-start gap-2">
                       <span className="text-[#FFB800] mt-0.5">3.</span>
-                      <span>最高可获得 <span className="text-[#FFB800] font-medium">2%</span> 网体收益</span>
+                      <span>{t('referral.teamRule3')} <span className="text-[#FFB800] font-medium">2%</span> {t('referral.teamRule3b')}</span>
                     </div>
                   </div>
                 </div>
