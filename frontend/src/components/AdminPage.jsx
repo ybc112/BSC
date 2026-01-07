@@ -8,6 +8,7 @@ import {
   FiLayers, FiGift, FiActivity, FiEdit3, FiSave, FiRefreshCw, FiPlus, FiMinus, FiTarget
 } from 'react-icons/fi';
 import { formatNumber, CONTRACTS } from '../utils/constants';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function AdminPage({
   account,
@@ -16,6 +17,7 @@ export default function AdminPage({
   tokenMiningV2Data,
   onRefresh
 }) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('lp-mining');
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -111,13 +113,13 @@ export default function AdminPage({
     try {
       const duration = parseInt(lpConfig.lockDays) * 86400;
       const tx = await contracts.lpMining.setLockDuration(duration);
-      toast.loading('设置锁仓期...', { id: 'setLock' });
+      toast.loading(t('toast.settingLockPeriod'), { id: 'setLock' });
       await tx.wait();
-      toast.success('锁仓期设置成功', { id: 'setLock' });
+      toast.success(t('toast.lockPeriodSuccess'), { id: 'setLock' });
       setLpConfig(prev => ({ ...prev, lockDays: '' }));
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '设置失败', { id: 'setLock' });
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setLock' });
     } finally {
       setIsUpdating(false);
     }
@@ -130,13 +132,13 @@ export default function AdminPage({
       const totalRewards = ethers.parseEther(lpConfig.totalRewards);
       const duration = parseFloat(lpConfig.miningYears) * 365 * 86400;
       const tx = await contracts.lpMining.setMiningParams(totalRewards, Math.floor(duration));
-      toast.loading('设置挖矿参数...', { id: 'setParams' });
+      toast.loading(t('toast.settingParams'), { id: 'setParams' });
       await tx.wait();
-      toast.success('挖矿参数设置成功', { id: 'setParams' });
+      toast.success(t('toast.paramsSuccess'), { id: 'setParams' });
       setLpConfig(prev => ({ ...prev, totalRewards: '', miningYears: '' }));
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '设置失败', { id: 'setParams' });
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setParams' });
     } finally {
       setIsUpdating(false);
     }
@@ -149,13 +151,13 @@ export default function AdminPage({
       const userShare = parseInt(lpConfig.userShare) * 100;
       const splitShare = parseInt(lpConfig.splitShare) * 100;
       const tx = await contracts.lpMining.setDistributionRates(userShare, splitShare);
-      toast.loading('设置分配比例...', { id: 'setDist' });
+      toast.loading(t('toast.settingDistribution'), { id: 'setDist' });
       await tx.wait();
-      toast.success('分配比例设置成功', { id: 'setDist' });
+      toast.success(t('toast.distributionSuccess'), { id: 'setDist' });
       setLpConfig(prev => ({ ...prev, userShare: '', splitShare: '' }));
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '设置失败', { id: 'setDist' });
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setDist' });
     } finally {
       setIsUpdating(false);
     }
@@ -169,13 +171,13 @@ export default function AdminPage({
       const ref2 = parseInt(lpConfig.ref2) * 100;
       const ref3 = parseInt(lpConfig.ref3) * 100;
       const tx = await contracts.lpMining.setReferralRates(ref1, ref2, ref3);
-      toast.loading('设置推荐比例...', { id: 'setRef' });
+      toast.loading(t('toast.settingReferralRates'), { id: 'setRef' });
       await tx.wait();
-      toast.success('推荐比例设置成功', { id: 'setRef' });
+      toast.success(t('toast.referralRatesSuccess'), { id: 'setRef' });
       setLpConfig(prev => ({ ...prev, ref1: '', ref2: '', ref3: '' }));
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '设置失败', { id: 'setRef' });
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setRef' });
     } finally {
       setIsUpdating(false);
     }
@@ -188,7 +190,7 @@ export default function AdminPage({
     const validRates = splitConfig.rates.filter((r, i) => ethers.isAddress(splitConfig.addresses[i]) && r);
 
     if (validAddresses.length === 0) {
-      toast.error('请至少填写一个有效地址');
+      toast.error(t('toast.fillValidAddress'));
       return;
     }
 
@@ -197,13 +199,13 @@ export default function AdminPage({
       // rates 转换为 basis points (如 10% = 1000)
       const ratesInBP = validRates.map(r => Math.floor(parseFloat(r) * 100));
       const tx = await contracts.lpMining.setSplitAddresses(validAddresses, ratesInBP);
-      toast.loading('设置分流地址...', { id: 'setSplit' });
+      toast.loading(t('toast.settingSplitAddresses'), { id: 'setSplit' });
       await tx.wait();
-      toast.success('分流地址设置成功', { id: 'setSplit' });
+      toast.success(t('toast.splitAddressesSuccess'), { id: 'setSplit' });
       setSplitConfig({ addresses: ['', '', ''], rates: ['', '', ''] });
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '设置失败', { id: 'setSplit' });
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setSplit' });
     } finally {
       setIsUpdating(false);
     }
@@ -216,7 +218,7 @@ export default function AdminPage({
     const validRates = teamLevelConfig.rates.filter((r, i) => teamLevelConfig.thresholds[i] && r);
 
     if (validThresholds.length === 0) {
-      toast.error('请至少填写一个等级配置');
+      toast.error(t('toast.fillLevelConfig'));
       return;
     }
 
@@ -226,13 +228,13 @@ export default function AdminPage({
       const thresholdsInWei = validThresholds.map(t => ethers.parseEther(t));
       const ratesInBP = validRates.map(r => Math.floor(parseFloat(r) * 100));
       const tx = await contracts.lpMining.setTeamLevels(thresholdsInWei, ratesInBP);
-      toast.loading('设置团队等级...', { id: 'setTeamLevel' });
+      toast.loading(t('toast.settingTeamLevels'), { id: 'setTeamLevel' });
       await tx.wait();
-      toast.success('团队等级设置成功', { id: 'setTeamLevel' });
+      toast.success(t('toast.teamLevelsSuccess'), { id: 'setTeamLevel' });
       setTeamLevelConfig({ thresholds: ['', '', ''], rates: ['', '', ''] });
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '设置失败', { id: 'setTeamLevel' });
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setTeamLevel' });
     } finally {
       setIsUpdating(false);
     }
@@ -245,13 +247,13 @@ export default function AdminPage({
     try {
       const totalRewards = ethers.parseEther(tokenV2Config.totalRewards);
       const tx = await contracts.tokenMiningV2.setTotalRewards(totalRewards);
-      toast.loading('设置总奖励...', { id: 'setTotalV2' });
+      toast.loading(t('toast.settingTotalRewards'), { id: 'setTotalV2' });
       await tx.wait();
-      toast.success('总奖励设置成功', { id: 'setTotalV2' });
+      toast.success(t('toast.totalRewardsSuccess'), { id: 'setTotalV2' });
       setTokenV2Config(prev => ({ ...prev, totalRewards: '' }));
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '设置失败', { id: 'setTotalV2' });
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setTotalV2' });
     } finally {
       setIsUpdating(false);
     }
@@ -268,13 +270,13 @@ export default function AdminPage({
       // 获取当前档位的 duration
       const tierConfig = await contracts.tokenMiningV2.getTierConfig(tier);
       const tx = await contracts.tokenMiningV2.setTierConfig(tier, tierConfig.duration, dailyRate);
-      toast.loading(`设置档位${tier}费率...`, { id: 'setTier' });
+      toast.loading(t('toast.settingTierRate'), { id: 'setTier' });
       await tx.wait();
-      toast.success(`档位${tier}费率设置成功`, { id: 'setTier' });
+      toast.success(t('toast.tierRateSuccess'), { id: 'setTier' });
       setTokenV2Config(prev => ({ ...prev, [rateKey]: '' }));
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '设置失败', { id: 'setTier' });
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setTier' });
     } finally {
       setIsUpdating(false);
     }
@@ -288,13 +290,13 @@ export default function AdminPage({
       const buyFee = Math.floor(parseFloat(tokenConfig.buyFee) * 100);
       const sellFee = Math.floor(parseFloat(tokenConfig.sellFee) * 100);
       const tx = await contracts.projectTokenV2.setFees(buyFee, sellFee);
-      toast.loading('设置滑点...', { id: 'setFees' });
+      toast.loading(t('toast.settingFees'), { id: 'setFees' });
       await tx.wait();
-      toast.success('滑点设置成功', { id: 'setFees' });
+      toast.success(t('toast.feesSuccess'), { id: 'setFees' });
       setTokenConfig(prev => ({ ...prev, buyFee: '', sellFee: '' }));
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '设置失败', { id: 'setFees' });
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setFees' });
     } finally {
       setIsUpdating(false);
     }
@@ -303,19 +305,19 @@ export default function AdminPage({
   const handleSetPair = async () => {
     if (!contracts?.projectTokenV2 || !tokenConfig.pairAddress) return;
     if (!ethers.isAddress(tokenConfig.pairAddress)) {
-      toast.error('无效的地址格式');
+      toast.error(t('toast.invalidAddress'));
       return;
     }
     setIsUpdating(true);
     try {
       const tx = await contracts.projectTokenV2.setPair(tokenConfig.pairAddress, true);
-      toast.loading('设置交易对...', { id: 'setPair' });
+      toast.loading(t('toast.settingPair'), { id: 'setPair' });
       await tx.wait();
-      toast.success('交易对设置成功', { id: 'setPair' });
+      toast.success(t('toast.pairSuccess'), { id: 'setPair' });
       setTokenConfig(prev => ({ ...prev, pairAddress: '' }));
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '设置失败', { id: 'setPair' });
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setPair' });
     } finally {
       setIsUpdating(false);
     }
@@ -324,19 +326,19 @@ export default function AdminPage({
   const handleSetExcluded = async (exclude = true) => {
     if (!contracts?.projectTokenV2 || !tokenConfig.excludeAddress) return;
     if (!ethers.isAddress(tokenConfig.excludeAddress)) {
-      toast.error('无效的地址格式');
+      toast.error(t('toast.invalidAddress'));
       return;
     }
     setIsUpdating(true);
     try {
       const tx = await contracts.projectTokenV2.setExcludedFromFee(tokenConfig.excludeAddress, exclude);
-      toast.loading(exclude ? '添加白名单...' : '移除白名单...', { id: 'setExclude' });
+      toast.loading(exclude ? t('toast.addingWhitelist') : t('toast.removingWhitelist'), { id: 'setExclude' });
       await tx.wait();
-      toast.success(exclude ? '已添加白名单' : '已移除白名单', { id: 'setExclude' });
+      toast.success(exclude ? t('toast.whitelistAdded') : t('toast.whitelistRemoved'), { id: 'setExclude' });
       setTokenConfig(prev => ({ ...prev, excludeAddress: '' }));
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '操作失败', { id: 'setExclude' });
+      toast.error(err.reason || t('toast.operationFailed'), { id: 'setExclude' });
     } finally {
       setIsUpdating(false);
     }
@@ -345,19 +347,19 @@ export default function AdminPage({
   const handleSetFeeReceiver = async () => {
     if (!contracts?.projectTokenV2 || !tokenConfig.feeReceiver) return;
     if (!ethers.isAddress(tokenConfig.feeReceiver)) {
-      toast.error('无效的地址格式');
+      toast.error(t('toast.invalidAddress'));
       return;
     }
     setIsUpdating(true);
     try {
       const tx = await contracts.projectTokenV2.setFeeReceiver(tokenConfig.feeReceiver);
-      toast.loading('设置手续费接收地址...', { id: 'setReceiver' });
+      toast.loading(t('toast.settingFeeReceiver'), { id: 'setReceiver' });
       await tx.wait();
-      toast.success('手续费接收地址设置成功', { id: 'setReceiver' });
+      toast.success(t('toast.feeReceiverSuccess'), { id: 'setReceiver' });
       setTokenConfig(prev => ({ ...prev, feeReceiver: '' }));
       onRefresh?.();
     } catch (err) {
-      toast.error(err.reason || '设置失败', { id: 'setReceiver' });
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setReceiver' });
     } finally {
       setIsUpdating(false);
     }
@@ -366,7 +368,7 @@ export default function AdminPage({
   // 复制地址
   const copyAddress = (address) => {
     navigator.clipboard.writeText(address);
-    toast.success('已复制地址');
+    toast.success(t('toast.addressCopied'));
   };
 
   // 未连接或非owner
@@ -375,8 +377,8 @@ export default function AdminPage({
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <FiShield className="w-16 h-16 text-white/20 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">管理员控制台</h2>
-          <p className="text-white/50">请先连接钱包</p>
+          <h2 className="text-2xl font-bold text-white mb-2">{t('admin.title')}</h2>
+          <p className="text-white/50">{t('admin.pleaseConnect')}</p>
         </div>
       </div>
     );
@@ -387,8 +389,8 @@ export default function AdminPage({
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-[#00D9A5]/30 border-t-[#00D9A5] rounded-full animate-spin mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">加载中...</h2>
-          <p className="text-white/50">正在验证管理员权限</p>
+          <h2 className="text-2xl font-bold text-white mb-2">{t('admin.loading')}</h2>
+          <p className="text-white/50">{t('admin.verifyingAdmin')}</p>
         </div>
       </div>
     );
@@ -399,21 +401,21 @@ export default function AdminPage({
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
           <FiAlertTriangle className="w-16 h-16 text-[#FF6B6B] mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">无权访问</h2>
-          <p className="text-white/50 mb-4">当前钱包不是任何合约的 Owner</p>
+          <h2 className="text-2xl font-bold text-white mb-2">{t('admin.noAccess')}</h2>
+          <p className="text-white/50 mb-4">{t('admin.notOwner')}</p>
           <div className="text-left bg-white/5 rounded-xl p-4 max-w-md mx-auto">
-            <p className="text-xs text-white/40 mb-2">调试信息:</p>
+            <p className="text-xs text-white/40 mb-2">{t('admin.debugInfo')}</p>
             <p className="text-xs text-white/60 mb-1">
-              连接地址: <code className="text-[#00D9A5]">{account}</code>
+              {t('admin.connectedAddress')} <code className="text-[#00D9A5]">{account}</code>
             </p>
             <p className="text-xs text-white/60 mb-1">
-              LP Mining Owner: <code className="text-[#FFB800]">{owners.lpMining || '未加载'}</code>
+              {t('admin.lpMiningOwner')} <code className="text-[#FFB800]">{owners.lpMining || t('admin.notLoaded')}</code>
             </p>
             <p className="text-xs text-white/60 mb-1">
-              TokenMiningV2 Owner: <code className="text-[#FFB800]">{owners.tokenMiningV2 || '未加载'}</code>
+              {t('admin.tokenMiningV2Owner')} <code className="text-[#FFB800]">{owners.tokenMiningV2 || t('admin.notLoaded')}</code>
             </p>
             <p className="text-xs text-white/60">
-              ProjectTokenV2 Owner: <code className="text-[#FFB800]">{owners.projectTokenV2 || '未加载'}</code>
+              {t('admin.projectTokenV2Owner')} <code className="text-[#FFB800]">{owners.projectTokenV2 || t('admin.notLoaded')}</code>
             </p>
           </div>
         </div>
@@ -439,8 +441,8 @@ export default function AdminPage({
             <FiShield className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">管理员控制台</h1>
-            <p className="text-white/50">合约参数配置与管理</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">{t('admin.title')}</h1>
+            <p className="text-white/50">{t('admin.subtitle')}</p>
           </div>
         </div>
         <button
@@ -448,7 +450,7 @@ export default function AdminPage({
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 transition-colors"
         >
           <FiRefreshCw className="w-4 h-4" />
-          刷新数据
+          {t('admin.refreshData')}
         </button>
       </div>
 
@@ -457,9 +459,9 @@ export default function AdminPage({
         <div className="flex items-start gap-3">
           <FiAlertTriangle className="w-5 h-5 text-[#FF6B6B] mt-0.5" />
           <div>
-            <p className="text-[#FF6B6B] font-medium">管理员操作注意事项</p>
+            <p className="text-[#FF6B6B] font-medium">{t('admin.warning')}</p>
             <p className="text-white/50 text-sm mt-1">
-              修改合约参数会影响所有用户，请谨慎操作。部分参数修改后无法撤销。
+              {t('admin.warningDesc')}
             </p>
           </div>
         </div>
@@ -526,23 +528,23 @@ export default function AdminPage({
               <div className="neon-card-inner">
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <FiActivity className="w-5 h-5 text-[#00D9A5]" />
-                  当前配置
+                  {t('admin.currentConfig')}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="p-3 rounded-lg bg-white/5">
-                    <div className="text-xs text-white/40 mb-1">锁仓期</div>
-                    <div className="text-lg font-bold text-white">{contractConfig?.lockDurationDays || 30} 天</div>
+                    <div className="text-xs text-white/40 mb-1">{t('admin.lockPeriod')}</div>
+                    <div className="text-lg font-bold text-white">{contractConfig?.lockDurationDays || 30} {t('admin.days')}</div>
                   </div>
                   <div className="p-3 rounded-lg bg-white/5">
-                    <div className="text-xs text-white/40 mb-1">总奖励</div>
+                    <div className="text-xs text-white/40 mb-1">{t('admin.totalRewards')}</div>
                     <div className="text-lg font-bold text-white">{formatNumber(contractConfig?.totalRewards)} AGG</div>
                   </div>
                   <div className="p-3 rounded-lg bg-white/5">
-                    <div className="text-xs text-white/40 mb-1">用户/分成</div>
+                    <div className="text-xs text-white/40 mb-1">{t('admin.userSplit')}</div>
                     <div className="text-lg font-bold text-white">{contractConfig?.userBaseShare}% / {contractConfig?.splitShare}%</div>
                   </div>
                   <div className="p-3 rounded-lg bg-white/5">
-                    <div className="text-xs text-white/40 mb-1">推荐比例</div>
+                    <div className="text-xs text-white/40 mb-1">{t('admin.referralRates')}</div>
                     <div className="text-lg font-bold text-white">{contractConfig?.referralLevel1}% / {contractConfig?.referralLevel2}% / {contractConfig?.referralLevel3}%</div>
                   </div>
                 </div>
@@ -553,12 +555,12 @@ export default function AdminPage({
             <div className="glass-premium p-6">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <FiLock className="w-4 h-4 text-[#FFB800]" />
-                锁仓期设置
+                {t('admin.lockPeriodSetting')}
               </h3>
               <div className="flex gap-3">
                 <input
                   type="number"
-                  placeholder="锁仓天数"
+                  placeholder={t('admin.lockDays')}
                   value={lpConfig.lockDays}
                   onChange={(e) => setLpConfig(prev => ({ ...prev, lockDays: e.target.value }))}
                   className="input-premium flex-1"
@@ -569,7 +571,7 @@ export default function AdminPage({
                   className="btn-premium px-6 disabled:opacity-50"
                 >
                   <FiSave className="w-4 h-4 mr-2" />
-                  保存
+                  {t('admin.save')}
                 </button>
               </div>
             </div>
@@ -578,19 +580,19 @@ export default function AdminPage({
             <div className="glass-premium p-6">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <FiGift className="w-4 h-4 text-[#FFB800]" />
-                挖矿参数
+                {t('admin.miningParams')}
               </h3>
               <div className="grid md:grid-cols-2 gap-3 mb-3">
                 <input
                   type="number"
-                  placeholder="总奖励 (AGG)"
+                  placeholder={t('admin.totalRewardAmount')}
                   value={lpConfig.totalRewards}
                   onChange={(e) => setLpConfig(prev => ({ ...prev, totalRewards: e.target.value }))}
                   className="input-premium"
                 />
                 <input
                   type="number"
-                  placeholder="挖矿时长 (年)"
+                  placeholder={t('admin.miningDuration')}
                   value={lpConfig.miningYears}
                   onChange={(e) => setLpConfig(prev => ({ ...prev, miningYears: e.target.value }))}
                   className="input-premium"
@@ -602,7 +604,7 @@ export default function AdminPage({
                 className="btn-premium w-full disabled:opacity-50"
               >
                 <FiSave className="w-4 h-4 mr-2" />
-                保存挖矿参数
+                {t('admin.saveMiningParams')}
               </button>
             </div>
 
@@ -610,19 +612,19 @@ export default function AdminPage({
             <div className="glass-premium p-6">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <FiPercent className="w-4 h-4 text-[#FFB800]" />
-                分配比例 (总和 = 100%)
+                {t('admin.distributionRates')}
               </h3>
               <div className="grid md:grid-cols-2 gap-3 mb-3">
                 <input
                   type="number"
-                  placeholder="用户比例 %"
+                  placeholder={t('admin.userRate')}
                   value={lpConfig.userShare}
                   onChange={(e) => setLpConfig(prev => ({ ...prev, userShare: e.target.value }))}
                   className="input-premium"
                 />
                 <input
                   type="number"
-                  placeholder="分成比例 %"
+                  placeholder={t('admin.splitRate')}
                   value={lpConfig.splitShare}
                   onChange={(e) => setLpConfig(prev => ({ ...prev, splitShare: e.target.value }))}
                   className="input-premium"
@@ -634,7 +636,7 @@ export default function AdminPage({
                 className="btn-premium w-full disabled:opacity-50"
               >
                 <FiSave className="w-4 h-4 mr-2" />
-                保存分配比例
+                {t('admin.saveDistributionRates')}
               </button>
             </div>
 
@@ -642,26 +644,26 @@ export default function AdminPage({
             <div className="glass-premium p-6">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <FiUsers className="w-4 h-4 text-[#FFB800]" />
-                推荐比例
+                {t('admin.referralRatesSetting')}
               </h3>
               <div className="grid md:grid-cols-3 gap-3 mb-3">
                 <input
                   type="number"
-                  placeholder="1代 %"
+                  placeholder={t('admin.level1')}
                   value={lpConfig.ref1}
                   onChange={(e) => setLpConfig(prev => ({ ...prev, ref1: e.target.value }))}
                   className="input-premium"
                 />
                 <input
                   type="number"
-                  placeholder="2代 %"
+                  placeholder={t('admin.level2')}
                   value={lpConfig.ref2}
                   onChange={(e) => setLpConfig(prev => ({ ...prev, ref2: e.target.value }))}
                   className="input-premium"
                 />
                 <input
                   type="number"
-                  placeholder="3代 %"
+                  placeholder={t('admin.level3')}
                   value={lpConfig.ref3}
                   onChange={(e) => setLpConfig(prev => ({ ...prev, ref3: e.target.value }))}
                   className="input-premium"
@@ -673,7 +675,7 @@ export default function AdminPage({
                 className="btn-premium w-full disabled:opacity-50"
               >
                 <FiSave className="w-4 h-4 mr-2" />
-                保存推荐比例
+                {t('admin.saveReferralRates')}
               </button>
             </div>
 
@@ -681,16 +683,16 @@ export default function AdminPage({
             <div className="glass-premium p-6">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <FiLayers className="w-4 h-4 text-[#FFB800]" />
-                分流地址配置 (35% 池分配)
+                {t('admin.splitAddressConfig')}
               </h3>
               <p className="text-xs text-white/50 mb-4">
-                配置收益分流地址和比例。总比例应等于 100%。
+                {t('admin.splitAddressDesc')}
               </p>
 
               {/* 当前配置展示 */}
               {lpMiningData?.splitConfig?.addresses?.length > 0 && (
                 <div className="mb-4 p-3 rounded-lg bg-white/5">
-                  <div className="text-xs text-white/40 mb-2">当前配置:</div>
+                  <div className="text-xs text-white/40 mb-2">{t('admin.currentConfigLabel')}</div>
                   {lpMiningData.splitConfig.addresses.map((addr, i) => (
                     <div key={i} className="flex justify-between text-sm mb-1">
                       <span className="text-white/60 font-mono">{addr.slice(0, 10)}...{addr.slice(-6)}</span>
@@ -703,7 +705,7 @@ export default function AdminPage({
               <div className="space-y-3 mb-4">
                 {[0, 1, 2].map((i) => (
                   <div key={i} className="flex gap-3 items-center">
-                    <span className="text-white/60 w-12 text-sm">地址{i + 1}</span>
+                    <span className="text-white/60 w-12 text-sm">{t('admin.address')}{i + 1}</span>
                     <input
                       type="text"
                       placeholder="0x..."
@@ -735,7 +737,7 @@ export default function AdminPage({
                 className="btn-premium w-full disabled:opacity-50"
               >
                 <FiSave className="w-4 h-4 mr-2" />
-                保存分流配置
+                {t('admin.saveSplitConfig')}
               </button>
             </div>
 
@@ -743,20 +745,20 @@ export default function AdminPage({
             <div className="glass-premium p-6">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <FiTarget className="w-4 h-4 text-[#FFB800]" />
-                团队等级配置 (极差奖励)
+                {t('admin.teamLevelConfig')}
               </h3>
               <p className="text-xs text-white/50 mb-4">
-                配置团队等级的业绩阈值和对应奖励比例。
+                {t('admin.teamLevelDesc')}
               </p>
 
               {/* 当前配置展示 */}
               {lpMiningData?.teamConfig?.thresholds?.length > 0 && (
                 <div className="mb-4 p-3 rounded-lg bg-white/5">
-                  <div className="text-xs text-white/40 mb-2">当前配置:</div>
+                  <div className="text-xs text-white/40 mb-2">{t('admin.currentConfigLabel')}</div>
                   <div className="grid grid-cols-3 gap-2">
                     {lpMiningData.teamConfig.thresholds.map((threshold, i) => (
                       <div key={i} className="text-center p-2 rounded bg-white/5">
-                        <div className="text-xs text-white/40">等级 {i + 1}</div>
+                        <div className="text-xs text-white/40">{t('admin.level')} {i + 1}</div>
                         <div className="text-sm text-white">{formatNumber(threshold)} LP</div>
                         <div className="text-xs text-[#FFB800]">{lpMiningData.teamConfig.rates[i]}%</div>
                       </div>
@@ -768,10 +770,10 @@ export default function AdminPage({
               <div className="space-y-3 mb-4">
                 {[0, 1, 2].map((i) => (
                   <div key={i} className="flex gap-3 items-center">
-                    <span className="text-white/60 w-12 text-sm">等级{i + 1}</span>
+                    <span className="text-white/60 w-12 text-sm">{t('admin.level')}{i + 1}</span>
                     <input
                       type="number"
-                      placeholder="阈值 (LP)"
+                      placeholder={t('admin.threshold')}
                       value={teamLevelConfig.thresholds[i]}
                       onChange={(e) => {
                         const newThresholds = [...teamLevelConfig.thresholds];
@@ -801,7 +803,7 @@ export default function AdminPage({
                 className="btn-premium w-full disabled:opacity-50"
               >
                 <FiSave className="w-4 h-4 mr-2" />
-                保存团队等级配置
+                {t('admin.saveTeamLevelConfig')}
               </button>
             </div>
           </motion.div>
@@ -819,35 +821,35 @@ export default function AdminPage({
               <div className="neon-card-inner">
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <FiActivity className="w-5 h-5 text-[#FFB800]" />
-                  当前配置
+                  {t('admin.currentConfig')}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div className="p-3 rounded-lg bg-white/5">
-                    <div className="text-xs text-white/40 mb-1">总质押</div>
+                    <div className="text-xs text-white/40 mb-1">{t('admin.totalStaked')}</div>
                     <div className="text-lg font-bold text-white">{formatNumber(tokenV2Status?.totalStaked)} AGG</div>
                   </div>
                   <div className="p-3 rounded-lg bg-white/5">
-                    <div className="text-xs text-white/40 mb-1">已分发</div>
+                    <div className="text-xs text-white/40 mb-1">{t('admin.distributed')}</div>
                     <div className="text-lg font-bold text-white">{formatNumber(tokenV2Status?.totalDistributed)} AGG</div>
                   </div>
                   <div className="p-3 rounded-lg bg-white/5">
-                    <div className="text-xs text-white/40 mb-1">剩余奖励</div>
+                    <div className="text-xs text-white/40 mb-1">{t('admin.remainingRewards')}</div>
                     <div className="text-lg font-bold text-white">{formatNumber(tokenV2Status?.remainingRewards)} AGG</div>
                   </div>
                   <div className="p-3 rounded-lg bg-white/5">
-                    <div className="text-xs text-white/40 mb-1">状态</div>
+                    <div className="text-xs text-white/40 mb-1">{t('admin.status')}</div>
                     <div className={`text-lg font-bold ${tokenV2Status?.miningEnded ? 'text-[#FF6B6B]' : 'text-[#00D9A5]'}`}>
-                      {tokenV2Status?.miningEnded ? '已结束' : '进行中'}
+                      {tokenV2Status?.miningEnded ? t('admin.ended') : t('admin.inProgress')}
                     </div>
                   </div>
                 </div>
-                <h4 className="text-sm text-white/60 mb-3">档位费率</h4>
+                <h4 className="text-sm text-white/60 mb-3">{t('admin.tierRates')}</h4>
                 <div className="grid grid-cols-4 gap-3">
-                  {['随进随出', '3个月', '6个月', '12个月'].map((name, i) => (
+                  {[t('admin.flexible'), t('admin.months3'), t('admin.months6'), t('admin.months12')].map((name, i) => (
                     <div key={i} className="p-3 rounded-lg bg-white/5 text-center">
                       <div className="text-xs text-white/40 mb-1">{name}</div>
                       <div className="text-lg font-bold text-[#FFB800]">{tierConfigs?.dailyRates?.[i] || '-'}%</div>
-                      <div className="text-xs text-white/30">每日</div>
+                      <div className="text-xs text-white/30">{t('admin.daily')}</div>
                     </div>
                   ))}
                 </div>
@@ -858,12 +860,12 @@ export default function AdminPage({
             <div className="glass-premium p-6">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <FiGift className="w-4 h-4 text-[#FFB800]" />
-                总奖励设置
+                {t('admin.totalRewardsSetting')}
               </h3>
               <div className="flex gap-3">
                 <input
                   type="number"
-                  placeholder="总奖励数量 (AGG)"
+                  placeholder={t('admin.totalRewardAmount2')}
                   value={tokenV2Config.totalRewards}
                   onChange={(e) => setTokenV2Config(prev => ({ ...prev, totalRewards: e.target.value }))}
                   className="input-premium flex-1"
@@ -874,24 +876,24 @@ export default function AdminPage({
                   className="btn-premium px-6 disabled:opacity-50"
                 >
                   <FiSave className="w-4 h-4 mr-2" />
-                  保存
+                  {t('admin.save')}
                 </button>
               </div>
-              <p className="text-xs text-white/40 mt-2">注意：新值必须大于已分发数量</p>
+              <p className="text-xs text-white/40 mt-2">{t('admin.noteLarger')}</p>
             </div>
 
             {/* Tier Configs */}
             <div className="glass-premium p-6">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <FiPercent className="w-4 h-4 text-[#FFB800]" />
-                档位费率设置 (每日百分比)
+                {t('admin.tierRateSetting')}
               </h3>
               <div className="space-y-3">
                 {[
-                  { tier: 0, name: '随进随出', placeholder: '如: 0.4' },
-                  { tier: 1, name: '3个月锁仓', placeholder: '如: 0.6' },
-                  { tier: 2, name: '6个月锁仓', placeholder: '如: 0.8' },
-                  { tier: 3, name: '12个月锁仓', placeholder: '如: 1.0' },
+                  { tier: 0, name: t('admin.flexibleLock'), placeholder: `${t('admin.eg')} 0.4` },
+                  { tier: 1, name: t('admin.months3Lock'), placeholder: `${t('admin.eg')} 0.6` },
+                  { tier: 2, name: t('admin.months6Lock'), placeholder: `${t('admin.eg')} 0.8` },
+                  { tier: 3, name: t('admin.months12Lock'), placeholder: `${t('admin.eg')} 1.0` },
                 ].map(({ tier, name, placeholder }) => (
                   <div key={tier} className="flex gap-3 items-center">
                     <span className="text-white/60 w-24 text-sm">{name}</span>
@@ -908,12 +910,12 @@ export default function AdminPage({
                       disabled={isUpdating || !tokenV2Config[`tier${tier}Rate`]}
                       className="btn-ghost px-4 disabled:opacity-50"
                     >
-                      保存
+                      {t('admin.save')}
                     </button>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-white/40 mt-3">注意：费率最高不超过 10% (1000 basis points)</p>
+              <p className="text-xs text-white/40 mt-3">{t('admin.noteMaxRate')}</p>
             </div>
           </motion.div>
         )}
@@ -929,26 +931,26 @@ export default function AdminPage({
             <div className="glass-premium p-6">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <FiPercent className="w-4 h-4 text-[#FF8A00]" />
-                滑点设置 (买入/卖出)
+                {t('admin.slippageSetting')}
               </h3>
               <div className="grid md:grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className="text-xs text-white/40 mb-1 block">买入滑点 %</label>
+                  <label className="text-xs text-white/40 mb-1 block">{t('admin.buySlippage')}</label>
                   <input
                     type="number"
                     step="0.1"
-                    placeholder="如: 0"
+                    placeholder={`${t('admin.eg')} 0`}
                     value={tokenConfig.buyFee}
                     onChange={(e) => setTokenConfig(prev => ({ ...prev, buyFee: e.target.value }))}
                     className="input-premium w-full"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-white/40 mb-1 block">卖出滑点 %</label>
+                  <label className="text-xs text-white/40 mb-1 block">{t('admin.sellSlippage')}</label>
                   <input
                     type="number"
                     step="0.1"
-                    placeholder="如: 2.8"
+                    placeholder={`${t('admin.eg')} 2.8`}
                     value={tokenConfig.sellFee}
                     onChange={(e) => setTokenConfig(prev => ({ ...prev, sellFee: e.target.value }))}
                     className="input-premium w-full"
@@ -961,21 +963,21 @@ export default function AdminPage({
                 className="btn-premium w-full disabled:opacity-50"
               >
                 <FiSave className="w-4 h-4 mr-2" />
-                保存滑点设置
+                {t('admin.saveSlippageSetting')}
               </button>
-              <p className="text-xs text-white/40 mt-2">最高 10%，当前: 买入 0% / 卖出 2.8%</p>
+              <p className="text-xs text-white/40 mt-2">{t('admin.maxSlippage')}</p>
             </div>
 
             {/* Pair Settings */}
             <div className="glass-premium p-6">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <FiLayers className="w-4 h-4 text-[#FF8A00]" />
-                交易对设置
+                {t('admin.pairSetting')}
               </h3>
               <div className="flex gap-3">
                 <input
                   type="text"
-                  placeholder="交易对合约地址 (0x...)"
+                  placeholder={t('admin.pairAddress')}
                   value={tokenConfig.pairAddress}
                   onChange={(e) => setTokenConfig(prev => ({ ...prev, pairAddress: e.target.value }))}
                   className="input-premium flex-1"
@@ -985,15 +987,15 @@ export default function AdminPage({
                   disabled={isUpdating || !tokenConfig.pairAddress}
                   className="btn-premium px-6 disabled:opacity-50"
                 >
-                  添加
+                  {t('admin.add')}
                 </button>
               </div>
               <p className="text-xs text-white/40 mt-2">
-                添加交易对后，用户向该地址转账（卖出）将收取滑点
+                {t('admin.pairDesc')}
               </p>
               {CONTRACTS.TOKEN_V2_PAIR && (
                 <div className="mt-3 p-3 rounded-lg bg-white/5">
-                  <div className="text-xs text-white/40">当前交易对:</div>
+                  <div className="text-xs text-white/40">{t('admin.currentPair')}</div>
                   <code className="text-xs text-[#00D9A5]">{CONTRACTS.TOKEN_V2_PAIR}</code>
                 </div>
               )}
@@ -1003,12 +1005,12 @@ export default function AdminPage({
             <div className="glass-premium p-6">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <FiDollarSign className="w-4 h-4 text-[#FF8A00]" />
-                手续费接收地址
+                {t('admin.feeReceiver')}
               </h3>
               <div className="flex gap-3">
                 <input
                   type="text"
-                  placeholder="接收地址 (0x...)"
+                  placeholder={t('admin.receiverAddress')}
                   value={tokenConfig.feeReceiver}
                   onChange={(e) => setTokenConfig(prev => ({ ...prev, feeReceiver: e.target.value }))}
                   className="input-premium flex-1"
@@ -1018,7 +1020,7 @@ export default function AdminPage({
                   disabled={isUpdating || !tokenConfig.feeReceiver}
                   className="btn-premium px-6 disabled:opacity-50"
                 >
-                  设置
+                  {t('admin.set')}
                 </button>
               </div>
             </div>
@@ -1027,12 +1029,12 @@ export default function AdminPage({
             <div className="glass-premium p-6">
               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                 <FiShield className="w-4 h-4 text-[#FF8A00]" />
-                白名单管理 (免滑点)
+                {t('admin.whitelist')}
               </h3>
               <div className="flex gap-3 mb-3">
                 <input
                   type="text"
-                  placeholder="钱包地址 (0x...)"
+                  placeholder={t('admin.walletAddress')}
                   value={tokenConfig.excludeAddress}
                   onChange={(e) => setTokenConfig(prev => ({ ...prev, excludeAddress: e.target.value }))}
                   className="input-premium flex-1"
@@ -1042,18 +1044,18 @@ export default function AdminPage({
                   disabled={isUpdating || !tokenConfig.excludeAddress}
                   className="btn-premium px-4 disabled:opacity-50"
                 >
-                  添加
+                  {t('admin.add')}
                 </button>
                 <button
                   onClick={() => handleSetExcluded(false)}
                   disabled={isUpdating || !tokenConfig.excludeAddress}
                   className="btn-ghost px-4 disabled:opacity-50"
                 >
-                  移除
+                  {t('admin.remove')}
                 </button>
               </div>
               <p className="text-xs text-white/40">
-                白名单地址在买卖时不收取滑点费用
+                {t('admin.whitelistDesc')}
               </p>
             </div>
           </motion.div>

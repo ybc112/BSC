@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMenu, FiX, FiExternalLink, FiShield } from 'react-icons/fi';
+import { FiMenu, FiX, FiExternalLink, FiShield, FiGlobe } from 'react-icons/fi';
 import { formatAddress } from '../utils/constants';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // AGG Logo 组件
 function Logo({ onClick }) {
@@ -36,18 +37,19 @@ function Logo({ onClick }) {
 
 export default function Header({ account, isConnecting, isCorrectNetwork, onConnect, onSwitchNetwork, currentPage, onPageChange, isAdmin }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { language, toggleLanguage, t } = useLanguage();
 
   // 基础导航项
   const baseNavItems = [
-    { id: 'home', label: '首页' },
-    { id: 'lp-mining', label: 'LP挖矿' },
-    { id: 'token-mining', label: '代币挖矿' },
-    { id: 'referral', label: '推荐奖励' },
+    { id: 'home', label: t('header.home') },
+    { id: 'lp-mining', label: t('header.lpMining') },
+    { id: 'token-mining', label: t('header.tokenMining') },
+    { id: 'referral', label: t('header.referral') },
   ];
 
   // 只有管理员才能看到管理菜单
   const navItems = isAdmin
-    ? [...baseNavItems, { id: 'admin', label: '管理', icon: <FiShield className="w-4 h-4" /> }]
+    ? [...baseNavItems, { id: 'admin', label: t('header.admin'), icon: <FiShield className="w-4 h-4" /> }]
     : baseNavItems;
 
   return (
@@ -74,6 +76,18 @@ export default function Header({ account, isConnecting, isCorrectNetwork, onConn
 
             {/* Wallet Connection */}
             <div className="flex items-center gap-3">
+              {/* Language Toggle */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={toggleLanguage}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                title={language === 'zh' ? 'Switch to English' : '切换到中文'}
+              >
+                <FiGlobe className="w-4 h-4" />
+                <span className="text-sm font-medium">{language === 'zh' ? 'EN' : '中'}</span>
+              </motion.button>
+
               {account ? (
                 <div className="flex items-center gap-2">
                   {!isCorrectNetwork && (
@@ -83,7 +97,7 @@ export default function Header({ account, isConnecting, isCorrectNetwork, onConn
                       onClick={onSwitchNetwork}
                       className="px-4 py-2 bg-[#FF6B6B]/20 border border-[#FF6B6B]/50 rounded-xl text-[#FF6B6B] text-sm font-medium hover:bg-[#FF6B6B]/30 transition-colors"
                     >
-                      切换网络
+                      {t('header.switchNetwork')}
                     </motion.button>
                   )}
                   <div className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1A2332] border border-white/5">
@@ -107,7 +121,7 @@ export default function Header({ account, isConnecting, isCorrectNetwork, onConn
                   disabled={isConnecting}
                   className="btn-primary text-sm"
                 >
-                  {isConnecting ? '连接中...' : '连接钱包'}
+                  {isConnecting ? t('header.connecting') : t('header.connectWallet')}
                 </motion.button>
               )}
 

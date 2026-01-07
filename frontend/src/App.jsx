@@ -15,6 +15,7 @@ import AdminPage from './components/AdminPage';
 import { useWallet } from './hooks/useWallet';
 import { useContracts, useLPMining, useTokenMiningV2, useTokenBalance, useAllowance } from './hooks/useContracts';
 import { CONTRACTS, formatAddress } from './utils/constants';
+import { useLanguage } from './contexts/LanguageContext';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -22,6 +23,8 @@ function App() {
   const [pendingReferrer, setPendingReferrer] = useState(null); // 待绑定的推荐人
   const [showReferrerModal, setShowReferrerModal] = useState(false); // 显示推荐人确认弹窗
   const [isBindingReferrer, setIsBindingReferrer] = useState(false); // 绑定中状态
+
+  const { t } = useLanguage();
 
   const {
     account,
@@ -111,7 +114,7 @@ function App() {
 
         // 检查推荐人是否有效（不是自己）
         if (pendingReferrer.toLowerCase() === account.toLowerCase()) {
-          toast.error('不能推荐自己');
+          toast.error(t('toast.cannotReferSelf'));
           localStorage.removeItem('referrer');
           setPendingReferrer(null);
           return;
@@ -134,9 +137,9 @@ function App() {
     setIsBindingReferrer(true);
     try {
       const tx = await contracts.lpMining.setReferrer(pendingReferrer);
-      toast.loading('正在绑定推荐人...', { id: 'bindRef' });
+      toast.loading(t('toast.bindingReferrer'), { id: 'bindRef' });
       await tx.wait();
-      toast.success('推荐人绑定成功！', { id: 'bindRef' });
+      toast.success(t('toast.bindSuccess'), { id: 'bindRef' });
 
       // 清除推荐人缓存
       localStorage.removeItem('referrer');
@@ -145,7 +148,7 @@ function App() {
       handleRefresh();
     } catch (err) {
       console.error('Bind referrer error:', err);
-      toast.error('绑定失败，请稍后重试', { id: 'bindRef' });
+      toast.error(t('toast.bindFailed'), { id: 'bindRef' });
     } finally {
       setIsBindingReferrer(false);
     }
@@ -249,14 +252,14 @@ function App() {
                   <FiUserPlus className="w-7 h-7 text-[#0B1120]" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">绑定推荐人</h3>
-                  <p className="text-white/50 text-sm">您是通过推荐链接访问的</p>
+                  <h3 className="text-xl font-bold text-white">{t('app.bindReferrer')}</h3>
+                  <p className="text-white/50 text-sm">{t('app.viaReferralLink')}</p>
                 </div>
               </div>
 
               {/* Content */}
               <div className="p-4 rounded-xl bg-white/5 border border-white/10 mb-6">
-                <div className="text-sm text-white/50 mb-2">推荐人地址</div>
+                <div className="text-sm text-white/50 mb-2">{t('app.referrerAddress')}</div>
                 <div className="font-mono text-white break-all">{pendingReferrer}</div>
                 <div className="text-xs text-white/40 mt-2">
                   {formatAddress(pendingReferrer)}
@@ -265,8 +268,8 @@ function App() {
 
               <div className="p-4 rounded-xl bg-[#00D9A5]/10 border border-[#00D9A5]/20 mb-6">
                 <p className="text-sm text-white/70">
-                  绑定推荐人后，您的挖矿收益将为推荐人带来奖励分成。
-                  <span className="text-[#00D9A5] font-medium">此操作不可撤销</span>，请确认推荐人地址正确。
+                  {t('app.bindReferrerDesc')}
+                  <span className="text-[#00D9A5] font-medium">{t('app.irreversible')}</span>{t('app.confirmCorrect')}
                 </p>
               </div>
 
@@ -277,7 +280,7 @@ function App() {
                   disabled={isBindingReferrer}
                   className="flex-1 py-3 rounded-xl bg-white/10 text-white/70 font-medium hover:bg-white/20 transition-colors disabled:opacity-50"
                 >
-                  取消
+                  {t('app.cancel')}
                 </button>
                 <button
                   onClick={handleConfirmBind}
@@ -287,12 +290,12 @@ function App() {
                   {isBindingReferrer ? (
                     <>
                       <div className="w-4 h-4 border-2 border-[#0B1120]/30 border-t-[#0B1120] rounded-full animate-spin" />
-                      绑定中...
+                      {t('app.binding')}
                     </>
                   ) : (
                     <>
                       <FiCheck className="w-4 h-4" />
-                      确认绑定
+                      {t('app.confirmBind')}
                     </>
                   )}
                 </button>
@@ -360,7 +363,7 @@ function App() {
                   <path d="M17 7H21V11" stroke="#0B1120" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-              <span className="text-white/50 text-sm">&copy; 2025 YieldVault. Built on BSC.</span>
+              <span className="text-white/50 text-sm">&copy; 2025 YieldVault. {t('footer.builtOn')}</span>
             </div>
             <div className="flex items-center gap-6">
               <a
@@ -369,7 +372,7 @@ function App() {
                 rel="noopener noreferrer"
                 className="text-white/40 hover:text-[#00D9A5] text-sm transition-colors"
               >
-                LP Mining Contract
+                {t('footer.lpMiningContract')}
               </a>
               <a
                 href="https://testnet.bscscan.com/address/0xD986ad28BE396ECC5CA882416AAF84F216ae08dc"
@@ -377,7 +380,7 @@ function App() {
                 rel="noopener noreferrer"
                 className="text-white/40 hover:text-[#00D9A5] text-sm transition-colors"
               >
-                Token Mining Contract
+                {t('footer.tokenMiningContract')}
               </a>
             </div>
           </div>

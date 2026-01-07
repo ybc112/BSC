@@ -4,6 +4,7 @@ import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
 import { FiUsers, FiCopy, FiCheck, FiGift, FiAward, FiShare2, FiUserPlus, FiChevronDown, FiChevronUp, FiExternalLink, FiTarget, FiLayers, FiChevronRight, FiRefreshCw } from 'react-icons/fi';
 import { formatNumber, formatAddress, parseContractError } from '../utils/constants';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function ReferralPage({
   account,
@@ -11,6 +12,7 @@ export default function ReferralPage({
   contracts,
   onRefresh
 }) {
+  const { t } = useLanguage();
   const [referrerAddress, setReferrerAddress] = useState('');
   const [isSettingReferrer, setIsSettingReferrer] = useState(false);
   const [isClaimingReferral, setIsClaimingReferral] = useState(false);
@@ -181,7 +183,7 @@ export default function ReferralPage({
     const link = `${window.location.origin}?ref=${account}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
-    toast.success('推荐链接已复制');
+    toast.success(t('toast.referralLinkCopied'));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -190,16 +192,16 @@ export default function ReferralPage({
     if (!contracts?.lpMining || !referrerAddress) return;
 
     if (!ethers.isAddress(referrerAddress)) {
-      toast.error('无效的地址格式');
+      toast.error(t('toast.invalidAddress'));
       return;
     }
 
     setIsSettingReferrer(true);
     try {
       const tx = await contracts.lpMining.setReferrer(referrerAddress);
-      toast.loading('设置推荐人中...', { id: 'setReferrer' });
+      toast.loading(t('toast.settingReferrer'), { id: 'setReferrer' });
       await tx.wait();
-      toast.success('推荐人设置成功', { id: 'setReferrer' });
+      toast.success(t('toast.setReferrerSuccess'), { id: 'setReferrer' });
       setReferrerAddress('');
       onRefresh?.();
     } catch (err) {
@@ -215,9 +217,9 @@ export default function ReferralPage({
     setIsClaimingReferral(true);
     try {
       const tx = await contracts.lpMining.claimReferralRewards();
-      toast.loading('领取推荐奖励中...', { id: 'claimReferral' });
+      toast.loading(t('toast.claimingReferral'), { id: 'claimReferral' });
       await tx.wait();
-      toast.success('领取成功', { id: 'claimReferral' });
+      toast.success(t('toast.claimSuccess'), { id: 'claimReferral' });
       onRefresh?.();
     } catch (err) {
       toast.error(parseContractError(err), { id: 'claimReferral' });
@@ -232,9 +234,9 @@ export default function ReferralPage({
     setIsClaimingTeam(true);
     try {
       const tx = await contracts.lpMining.claimTeamRewards();
-      toast.loading('领取团队奖励中...', { id: 'claimTeam' });
+      toast.loading(t('toast.claimingTeam'), { id: 'claimTeam' });
       await tx.wait();
-      toast.success('领取成功', { id: 'claimTeam' });
+      toast.success(t('toast.claimSuccess'), { id: 'claimTeam' });
       onRefresh?.();
     } catch (err) {
       toast.error(parseContractError(err), { id: 'claimTeam' });
@@ -254,13 +256,13 @@ export default function ReferralPage({
             <FiUsers className="w-7 h-7 text-[#0B1120]" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">推荐奖励</h1>
-            <p className="text-white/50">邀请好友，共享收益</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">{t('referral.title')}</h1>
+            <p className="text-white/50">{t('referral.subtitle')}</p>
           </div>
         </div>
         <div className="badge-glow">
           <FiGift className="w-4 h-4 mr-2" />
-          最高 35% 额外收益
+          {t('referral.maxBonus')}
         </div>
       </div>
 
@@ -279,8 +281,8 @@ export default function ReferralPage({
                 <FiShare2 className="w-10 h-10 text-[#0B1120]" />
               </div>
               <div className="flex-1 text-center md:text-left">
-                <h2 className="text-2xl font-bold mb-2 text-white">我的专属推荐链接</h2>
-                <p className="text-white/50">分享链接邀请好友参与挖矿，获得三级推荐奖励</p>
+                <h2 className="text-2xl font-bold mb-2 text-white">{t('referral.myReferralLink')}</h2>
+                <p className="text-white/50">{t('referral.shareLinkDesc')}</p>
               </div>
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -289,7 +291,7 @@ export default function ReferralPage({
                 className="btn-premium flex items-center gap-2"
               >
                 {copied ? <FiCheck className="w-5 h-5" /> : <FiCopy className="w-5 h-5" />}
-                <span>{copied ? '已复制' : '复制链接'}</span>
+                <span>{copied ? t('referral.copied') : t('referral.copyLink')}</span>
               </motion.button>
             </div>
           </div>
@@ -299,10 +301,10 @@ export default function ReferralPage({
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: '直推人数', value: userInfo?.referralCount || 0, suffix: '人', icon: <FiUserPlus className="w-5 h-5" />, color: 'primary' },
-          { label: '团队业绩', value: userInfo?.teamPerformance, suffix: 'LP', icon: <FiLayers className="w-5 h-5" />, color: 'gold' },
-          { label: '小区业绩', value: userInfo?.smallAreaPerformance, suffix: 'LP', icon: <FiTarget className="w-5 h-5" />, color: 'primary' },
-          { label: '团队等级', value: `${userInfo?.teamLevel || 0} 级`, suffix: '', icon: <FiAward className="w-5 h-5" />, color: 'gold', highlight: true },
+          { label: t('referral.directReferrals'), value: userInfo?.referralCount || 0, suffix: t('referral.person'), icon: <FiUserPlus className="w-5 h-5" />, color: 'primary' },
+          { label: t('referral.teamPerformance'), value: userInfo?.teamPerformance, suffix: 'LP', icon: <FiLayers className="w-5 h-5" />, color: 'gold' },
+          { label: t('referral.smallAreaPerformance'), value: userInfo?.smallAreaPerformance, suffix: 'LP', icon: <FiTarget className="w-5 h-5" />, color: 'primary' },
+          { label: t('referral.teamLevel'), value: `${userInfo?.teamLevel || 0} ${t('referral.level')}`, suffix: '', icon: <FiAward className="w-5 h-5" />, color: 'gold', highlight: true },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -336,12 +338,12 @@ export default function ReferralPage({
               <span className="w-10 h-10 rounded-xl bg-[#00D9A5]/20 flex items-center justify-center">
                 <FiUserPlus className="w-5 h-5 text-[#00D9A5]" />
               </span>
-              我的推荐人
+              {t('referral.myReferrer')}
             </h2>
 
             {hasReferrer ? (
               <div className="p-4 rounded-xl mb-6 bg-white/5 border border-white/5">
-                <div className="text-white/50 text-sm mb-2">推荐人地址</div>
+                <div className="text-white/50 text-sm mb-2">{t('referral.referrerAddress')}</div>
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-lg text-white">{formatAddress(userInfo.referrer)}</span>
                   <a
@@ -351,21 +353,21 @@ export default function ReferralPage({
                     className="flex items-center gap-1 text-[#00D9A5] hover:text-[#00FFB8] transition-colors"
                   >
                     <FiExternalLink className="w-4 h-4" />
-                    <span className="text-sm">查看</span>
+                    <span className="text-sm">{t('referral.view')}</span>
                   </a>
                 </div>
               </div>
             ) : (
               <>
                 <p className="text-white/50 text-sm mb-4">
-                  设置推荐人后，您的推荐人将获得您挖矿收益的推荐奖励
+                  {t('referral.setReferrerDesc')}
                 </p>
                 <div className="space-y-4 mb-6">
                   <input
                     type="text"
                     value={referrerAddress}
                     onChange={(e) => setReferrerAddress(e.target.value)}
-                    placeholder="输入推荐人地址 (0x...)"
+                    placeholder={t('referral.enterReferrerAddress')}
                     className="input-premium font-mono text-sm"
                   />
                   <motion.button
@@ -375,7 +377,7 @@ export default function ReferralPage({
                     disabled={isSettingReferrer || !referrerAddress || !account}
                     className="w-full btn-premium disabled:opacity-50"
                   >
-                    <span>{isSettingReferrer ? '设置中...' : '设置推荐人'}</span>
+                    <span>{isSettingReferrer ? t('referral.settingReferrer') : t('referral.setReferrer')}</span>
                   </motion.button>
                 </div>
               </>
@@ -386,13 +388,13 @@ export default function ReferralPage({
 
             {/* Referral Rewards */}
             <h3 className="font-semibold mb-4 text-white/80 flex items-center gap-2">
-              <FiGift className="text-[#00D9A5]" /> 推荐奖励
+              <FiGift className="text-[#00D9A5]" /> {t('referral.referralReward')}
             </h3>
 
             <div className="relative p-6 rounded-2xl mb-4 overflow-hidden bg-gradient-to-br from-[#1A2332] to-[#111827] border border-white/5">
               <div className="absolute inset-0 bg-gradient-to-br from-[#00D9A5]/5 to-[#FFB800]/5" />
               <div className="relative text-center">
-                <div className="text-white/50 text-sm mb-2">待领取推荐奖励</div>
+                <div className="text-white/50 text-sm mb-2">{t('referral.pendingReferralReward')}</div>
                 <div className="text-4xl font-bold text-gradient-premium mb-1">
                   {formatNumber(userInfo?.referralRewards, 4)}
                 </div>
@@ -409,7 +411,7 @@ export default function ReferralPage({
             >
               <span className="flex items-center justify-center gap-2">
                 <FiGift className="w-5 h-5" />
-                {isClaimingReferral ? '领取中...' : '领取推荐奖励'}
+                {isClaimingReferral ? t('referral.claiming') : t('referral.claimReferralReward')}
               </span>
             </motion.button>
           </div>
@@ -426,7 +428,7 @@ export default function ReferralPage({
               <span className="w-10 h-10 rounded-xl bg-[#FFB800]/20 flex items-center justify-center">
                 <FiAward className="w-5 h-5 text-[#FFB800]" />
               </span>
-              团队奖励
+              {t('referral.teamReward')}
             </h2>
 
             {/* Team Level Progress */}
@@ -450,10 +452,10 @@ export default function ReferralPage({
                         }`}>
                           {i + 1}
                         </span>
-                        等级 {i + 1}
+                        {t('referral.level')} {i + 1}
                       </span>
                       <span className={isAchieved ? 'text-[#00D9A5] font-medium' : 'text-white/50'}>
-                        {isAchieved ? '已达成' : `需 ${formatNumber(threshold)} LP`}
+                        {isAchieved ? t('referral.achieved') : `${t('referral.need')} ${formatNumber(threshold)} LP`}
                       </span>
                     </div>
                     <div className="progress-glow mb-2">
@@ -470,7 +472,7 @@ export default function ReferralPage({
                       />
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-white/40">奖励比例</span>
+                      <span className="text-white/40">{t('referral.rewardRate')}</span>
                       <span className="text-[#FFB800] font-medium">{rate}%</span>
                     </div>
                   </div>
@@ -482,7 +484,7 @@ export default function ReferralPage({
             <div className="relative p-6 rounded-2xl mb-4 overflow-hidden bg-gradient-to-br from-[#1A2332] to-[#111827] border border-white/5">
               <div className="absolute inset-0 bg-gradient-to-br from-[#FFB800]/5 to-[#FF8A00]/5" />
               <div className="relative text-center">
-                <div className="text-white/50 text-sm mb-2">待领取团队奖励</div>
+                <div className="text-white/50 text-sm mb-2">{t('referral.pendingTeamReward')}</div>
                 <div className="text-4xl font-bold text-gradient-gold mb-1">
                   {formatNumber(userInfo?.teamRewards, 4)}
                 </div>
@@ -500,7 +502,7 @@ export default function ReferralPage({
             >
               <span className="flex items-center justify-center gap-2">
                 <FiAward className="w-5 h-5" />
-                {isClaimingTeam ? '领取中...' : '领取团队奖励'}
+                {isClaimingTeam ? t('referral.claiming') : t('referral.claimTeamReward')}
               </span>
             </motion.button>
           </div>
@@ -517,9 +519,9 @@ export default function ReferralPage({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2 text-white">
             <FiUsers className="text-[#00D9A5]" />
-            我的团队
+            {t('referral.myTeam')}
             <span className="text-sm font-normal text-white/40 ml-2">
-              共 {level1Page.total > 0 ? level1Page.total : teamStats.level1} 人 (1代)
+              {t('referral.total')} {level1Page.total > 0 ? level1Page.total : teamStats.level1} {t('referral.personL1')}
             </span>
           </h2>
           <button
@@ -528,17 +530,17 @@ export default function ReferralPage({
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 transition-colors disabled:opacity-50"
           >
             <FiRefreshCw className={`w-4 h-4 ${loadingTeam ? 'animate-spin' : ''}`} />
-            刷新
+            {t('referral.refresh')}
           </button>
         </div>
 
         {/* Level Tabs */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[
-            { id: 'all', label: '全部', count: teamStats.total },
-            { id: '1', label: '1代', count: teamStats.level1, color: 'from-[#00D9A5] to-[#00B88A]' },
-            { id: '2', label: '2代', count: teamStats.level2, color: 'from-[#FFB800] to-[#FF8A00]' },
-            { id: '3', label: '3代', count: teamStats.level3, color: 'from-[#FF6B6B] to-[#FF8A00]' },
+            { id: 'all', label: t('referral.all'), count: teamStats.total },
+            { id: '1', label: t('referral.level1'), count: teamStats.level1, color: 'from-[#00D9A5] to-[#00B88A]' },
+            { id: '2', label: t('referral.level2'), count: teamStats.level2, color: 'from-[#FFB800] to-[#FF8A00]' },
+            { id: '3', label: t('referral.level3'), count: teamStats.level3, color: 'from-[#FF6B6B] to-[#FF8A00]' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -564,26 +566,26 @@ export default function ReferralPage({
           <div className="p-4 rounded-xl bg-gradient-to-br from-[#00D9A5]/10 to-[#00D9A5]/5 border border-[#00D9A5]/20">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-6 h-6 rounded-full bg-gradient-to-r from-[#00D9A5] to-[#00B88A] flex items-center justify-center text-[#0B1120] text-xs font-bold">1</div>
-              <span className="text-white/60 text-sm">1代会员</span>
+              <span className="text-white/60 text-sm">{t('referral.level1Members')}</span>
             </div>
             <div className="text-2xl font-bold text-[#00D9A5]">{teamStats.level1}</div>
-            <div className="text-xs text-white/40">奖励比例 20%</div>
+            <div className="text-xs text-white/40">{t('referral.level1Rate')}</div>
           </div>
           <div className="p-4 rounded-xl bg-gradient-to-br from-[#FFB800]/10 to-[#FFB800]/5 border border-[#FFB800]/20">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-6 h-6 rounded-full bg-gradient-to-r from-[#FFB800] to-[#FF8A00] flex items-center justify-center text-[#0B1120] text-xs font-bold">2</div>
-              <span className="text-white/60 text-sm">2代会员</span>
+              <span className="text-white/60 text-sm">{t('referral.level2Members')}</span>
             </div>
             <div className="text-2xl font-bold text-[#FFB800]">{teamStats.level2}</div>
-            <div className="text-xs text-white/40">奖励比例 10%</div>
+            <div className="text-xs text-white/40">{t('referral.level2Rate')}</div>
           </div>
           <div className="p-4 rounded-xl bg-gradient-to-br from-[#FF6B6B]/10 to-[#FF6B6B]/5 border border-[#FF6B6B]/20">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-6 h-6 rounded-full bg-gradient-to-r from-[#FF6B6B] to-[#FF8A00] flex items-center justify-center text-[#0B1120] text-xs font-bold">3</div>
-              <span className="text-white/60 text-sm">3代会员</span>
+              <span className="text-white/60 text-sm">{t('referral.level3Members')}</span>
             </div>
             <div className="text-2xl font-bold text-[#FF6B6B]">{teamStats.level3}</div>
-            <div className="text-xs text-white/40">奖励比例 5%</div>
+            <div className="text-xs text-white/40">{t('referral.level3Rate')}</div>
           </div>
         </div>
 
@@ -591,15 +593,15 @@ export default function ReferralPage({
         {loadingTeam ? (
           <div className="text-center py-12">
             <div className="w-12 h-12 border-4 border-[#00D9A5]/30 border-t-[#00D9A5] rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-white/50">加载团队数据...</p>
+            <p className="text-white/50">{t('referral.loadingTeam')}</p>
           </div>
         ) : teamStats.total === 0 ? (
           <div className="text-center py-12">
             <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
               <FiUsers className="w-10 h-10 text-white/20" />
             </div>
-            <p className="text-white/50 mb-2">暂无团队成员</p>
-            <p className="text-white/30 text-sm">分享您的推荐链接邀请好友</p>
+            <p className="text-white/50 mb-2">{t('referral.noTeamMembers')}</p>
+            <p className="text-white/30 text-sm">{t('referral.shareYourLink')}</p>
           </div>
         ) : (
           <div className="space-y-2">

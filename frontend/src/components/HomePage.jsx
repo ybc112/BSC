@@ -1,32 +1,35 @@
 import { motion } from 'framer-motion';
 import { FiTrendingUp, FiUsers, FiDollarSign, FiZap, FiArrowRight, FiAward, FiActivity, FiCheckCircle } from 'react-icons/fi';
 import { formatNumber } from '../utils/constants';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data }) {
+  const { t } = useLanguage();
+
   const stats = [
     {
-      label: 'LP 矿池总质押',
+      label: t('home.lpPoolStaked'),
       value: lpMiningData?.miningStatus?.totalStaked || '0',
       suffix: 'LP',
       icon: <FiTrendingUp className="w-5 h-5" />,
       color: 'primary',
     },
     {
-      label: '代币矿池质押',
+      label: t('home.tokenPoolStaked'),
       value: tokenMiningV2Data?.miningStatus?.totalStaked || '0',
       suffix: 'AGG',
       icon: <FiDollarSign className="w-5 h-5" />,
       color: 'gold',
     },
     {
-      label: 'LP 已分发奖励',
+      label: t('home.lpDistributed'),
       value: lpMiningData?.miningStatus?.totalDistributed || '0',
       suffix: 'AGG',
       icon: <FiZap className="w-5 h-5" />,
       color: 'primary',
     },
     {
-      label: '代币最高年化',
+      label: t('home.maxApy'),
       value: '365',
       suffix: '%',
       icon: <FiActivity className="w-5 h-5" />,
@@ -37,37 +40,37 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
   const features = [
     {
       icon: <FiTrendingUp className="w-7 h-7" />,
-      title: 'LP 质押挖矿',
-      subtitle: '70% 代币分配',
-      description: '质押 LP 代币参与挖矿，享受 65% 收益直接到账，3年线性释放',
-      stats: '7000万 AGG',
+      title: t('home.lpMiningTitle'),
+      subtitle: t('home.lpMiningSubtitle'),
+      description: t('home.lpMiningDesc'),
+      stats: t('home.lpMiningStats'),
       color: 'from-[#00D9A5] to-[#00B88A]',
       page: 'lp-mining',
     },
     {
       icon: <FiDollarSign className="w-7 h-7" />,
-      title: '代币质押挖矿 V2',
-      subtitle: '30% 代币分配',
-      description: '多档锁仓，收益更高！灵活质押146% APY，12个月锁仓365% APY',
-      stats: '3000万 AGG',
+      title: t('home.tokenMiningTitle'),
+      subtitle: t('home.tokenMiningSubtitle'),
+      description: t('home.tokenMiningDesc'),
+      stats: t('home.tokenMiningStats'),
       color: 'from-[#FFB800] to-[#FF8A00]',
       page: 'token-mining',
     },
     {
       icon: <FiUsers className="w-7 h-7" />,
-      title: '三级推荐奖励',
-      subtitle: '最高 35% 额外收益',
-      description: '邀请好友参与挖矿，1代20%、2代10%、3代5% 推荐奖励',
-      stats: '无限邀请',
+      title: t('home.referralTitle'),
+      subtitle: t('home.referralSubtitle'),
+      description: t('home.referralDesc'),
+      stats: t('home.referralStats'),
       color: 'from-[#00D9A5] to-[#FFB800]',
       page: 'referral',
     },
     {
       icon: <FiAward className="w-7 h-7" />,
-      title: '团队极差奖励',
-      subtitle: '最高 2% 网体收益',
-      description: '根据团队小区业绩获得极差奖励，等级越高收益越多',
-      stats: '3级等级',
+      title: t('home.teamTitle'),
+      subtitle: t('home.teamSubtitle'),
+      description: t('home.teamDesc'),
+      stats: t('home.teamStats'),
       color: 'from-[#FFB800] to-[#FF8A00]',
       page: 'referral',
     },
@@ -100,22 +103,22 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
           >
             <span className="badge-glow">
               <FiCheckCircle className="w-4 h-4 mr-2" />
-              BSC 链上 DeFi 协议 · 安全可靠
+              {t('home.badge')}
             </span>
           </motion.div>
 
           {/* Main Title */}
           <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-            <span className="text-white">质押挖矿</span>
+            <span className="text-white">{t('home.title1')}</span>
             <br />
-            <span className="text-gradient-premium text-glow">轻松赚取收益</span>
+            <span className="text-gradient-premium text-glow">{t('home.title2')}</span>
           </h1>
 
           {/* Subtitle */}
           <p className="text-xl md:text-2xl text-white/50 max-w-3xl mx-auto mb-10 leading-relaxed">
-            LP 挖矿 + 代币挖矿 + 推荐奖励 + 团队奖励
+            {t('home.subtitle')}
             <br />
-            <span className="text-white/70">总计 1 亿 AGG 代币奖励</span>
+            <span className="text-white/70">{t('home.totalReward')}</span>
           </p>
 
           {/* CTA Buttons */}
@@ -127,7 +130,7 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
               className="btn-premium"
             >
               <span className="flex items-center gap-2">
-                开始挖矿 <FiArrowRight className="w-5 h-5" />
+                {t('home.startMining')} <FiArrowRight className="w-5 h-5" />
               </span>
             </motion.button>
             <motion.button
@@ -137,7 +140,7 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
               className="btn-ghost"
             >
               <span className="flex items-center gap-2">
-                <FiUsers className="w-5 h-5" /> 邀请好友
+                <FiUsers className="w-5 h-5" /> {t('home.inviteFriends')}
               </span>
             </motion.button>
           </div>
@@ -181,9 +184,9 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
           className="text-center mb-12"
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
-            选择你的<span className="text-gradient-premium">挖矿方式</span>
+            {t('home.chooseMethod')}<span className="text-gradient-premium">{t('home.miningMethod')}</span>
           </h2>
-          <p className="text-white/50">多种收益渠道，灵活组合，最大化你的收益</p>
+          <p className="text-white/50">{t('home.moreChannels')}</p>
         </motion.div>
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -229,7 +232,7 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
                   {/* 底部操作 */}
                   <div className="flex items-center justify-between pt-4 border-t border-white/5">
                     <div className="flex items-center text-white/60 group-hover:text-[#00D9A5] transition-colors">
-                      <span className="text-sm font-medium">了解详情</span>
+                      <span className="text-sm font-medium">{t('home.learnMore')}</span>
                       <FiArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-2 transition-transform" />
                     </div>
                     {/* 装饰性点 */}
@@ -250,13 +253,13 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
       <section className="neon-card">
         <div className="neon-card-inner">
           <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center text-white">
-            代币分配方案
+            {t('home.tokenDistribution')}
           </h2>
 
           <div className="grid md:grid-cols-2 gap-8">
             {[
-              { percent: 70, label: 'LP 质押挖矿', amount: '7000 万', color: 'primary' },
-              { percent: 30, label: '代币质押挖矿', amount: '3000 万', color: 'gold' },
+              { percent: 70, label: t('home.lpMiningAlloc'), amount: '7000 万', color: 'primary' },
+              { percent: 30, label: t('home.tokenMiningAlloc'), amount: '3000 万', color: 'gold' },
             ].map((item, index) => (
               <motion.div
                 key={item.label}

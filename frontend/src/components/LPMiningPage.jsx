@@ -4,6 +4,7 @@ import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
 import { FiTrendingUp, FiClock, FiUsers, FiGift, FiInfo, FiChevronDown, FiChevronUp, FiPercent, FiLayers, FiZap, FiLock, FiSettings, FiAlertTriangle } from 'react-icons/fi';
 import { formatNumber, CONTRACTS, parseContractError } from '../utils/constants';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function LPMiningPage({
   account,
@@ -13,6 +14,8 @@ export default function LPMiningPage({
   contracts,
   onRefresh
 }) {
+  const { t } = useLanguage();
+
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isDepositing, setIsDepositing] = useState(false);
@@ -44,13 +47,13 @@ export default function LPMiningPage({
 
   // 格式化锁仓剩余时间
   const formatLockTime = (seconds) => {
-    if (!seconds || seconds <= 0) return '已解锁';
+    if (!seconds || seconds <= 0) return t('lpMining.unlocked');
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
-    if (days > 0) return `${days}天 ${hours}小时`;
-    if (hours > 0) return `${hours}小时 ${mins}分钟`;
-    return `${mins}分钟`;
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${mins}m`;
+    return `${mins}m`;
   };
 
   // 授权
@@ -59,9 +62,9 @@ export default function LPMiningPage({
     setIsApproving(true);
     try {
       const tx = await contracts.lpToken.approve(CONTRACTS.LP_MINING, ethers.MaxUint256);
-      toast.loading('授权中...', { id: 'approve' });
+      toast.loading(t('toast.approving'), { id: 'approve' });
       await tx.wait();
-      toast.success('授权成功', { id: 'approve' });
+      toast.success(t('toast.approveSuccess'), { id: 'approve' });
       onRefresh?.();
     } catch (err) {
       toast.error(parseContractError(err), { id: 'approve' });
@@ -77,9 +80,9 @@ export default function LPMiningPage({
     try {
       const amount = ethers.parseEther(depositAmount);
       const tx = await contracts.lpMining.deposit(amount);
-      toast.loading('质押中...', { id: 'deposit' });
+      toast.loading(t('toast.staking'), { id: 'deposit' });
       await tx.wait();
-      toast.success('质押成功', { id: 'deposit' });
+      toast.success(t('toast.stakeSuccess'), { id: 'deposit' });
       setDepositAmount('');
       onRefresh?.();
     } catch (err) {
@@ -96,9 +99,9 @@ export default function LPMiningPage({
     try {
       const amount = ethers.parseEther(withdrawAmount);
       const tx = await contracts.lpMining.withdraw(amount);
-      toast.loading('解押中...', { id: 'withdraw' });
+      toast.loading(t('toast.unstaking'), { id: 'withdraw' });
       await tx.wait();
-      toast.success('解押成功', { id: 'withdraw' });
+      toast.success(t('toast.unstakeSuccess'), { id: 'withdraw' });
       setWithdrawAmount('');
       onRefresh?.();
     } catch (err) {
@@ -114,9 +117,9 @@ export default function LPMiningPage({
     setIsClaiming(true);
     try {
       const tx = await contracts.lpMining.claim();
-      toast.loading('领取中...', { id: 'claim' });
+      toast.loading(t('toast.claiming'), { id: 'claim' });
       await tx.wait();
-      toast.success('领取成功', { id: 'claim' });
+      toast.success(t('toast.claimSuccess'), { id: 'claim' });
       onRefresh?.();
     } catch (err) {
       toast.error(parseContractError(err), { id: 'claim' });
@@ -229,9 +232,9 @@ export default function LPMiningPage({
     if (!miningStatus?.endTime) return '--';
     const now = Math.floor(Date.now() / 1000);
     const remaining = miningStatus.endTime - now;
-    if (remaining <= 0) return '已结束';
+    if (remaining <= 0) return t('tokenMining.ended');
     const days = Math.floor(remaining / 86400);
-    return `${days} 天`;
+    return `${days} ${t('lpMining.days')}`;
   };
 
   // 计算进度
@@ -249,14 +252,14 @@ export default function LPMiningPage({
             <FiTrendingUp className="w-7 h-7 text-[#0B1120]" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">LP 质押挖矿</h1>
-            <p className="text-white/50">质押 LP 代币，赚取挖矿奖励</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">{t('lpMining.title')}</h1>
+            <p className="text-white/50">{t('lpMining.subtitle')}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="badge-glow" style={{ background: 'linear-gradient(135deg, rgba(255,184,0,0.2) 0%, rgba(255,138,0,0.2) 100%)', borderColor: 'rgba(255,184,0,0.3)' }}>
             <FiLock className="w-4 h-4 mr-2 text-[#FFB800]" />
-            <span className="text-[#FFB800]">锁仓 {contractConfig?.lockDurationDays || 30} 天</span>
+            <span className="text-[#FFB800]">{t('lpMining.lockDays')} {contractConfig?.lockDurationDays || 30} {t('lpMining.days')}</span>
           </div>
         </div>
       </div>
@@ -270,9 +273,9 @@ export default function LPMiningPage({
         >
           <FiLock className="w-5 h-5 text-[#FFB800]" />
           <div>
-            <span className="text-[#FFB800] font-medium">锁仓中</span>
+            <span className="text-[#FFB800] font-medium">{t('lpMining.locked')}</span>
             <span className="text-white/60 ml-2">
-              剩余时间：{formatLockTime(lockStatus.remainingTime)}
+              {t('lpMining.remaining')}：{formatLockTime(lockStatus.remainingTime)}
             </span>
           </div>
         </motion.div>
@@ -281,10 +284,10 @@ export default function LPMiningPage({
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: '总质押量', value: miningStatus?.totalStaked, suffix: 'LP', icon: <FiLayers className="w-5 h-5" />, color: 'primary' },
-          { label: '剩余奖励', value: miningStatus?.remainingRewards, suffix: 'AGG', icon: <FiGift className="w-5 h-5" />, color: 'gold' },
-          { label: '剩余时间', value: getRemainingTime(), suffix: '', icon: <FiClock className="w-5 h-5" />, color: 'primary' },
-          { label: '已分发', value: miningStatus?.totalDistributed, suffix: 'AGG', icon: <FiZap className="w-5 h-5" />, color: 'gold' },
+          { label: t('lpMining.totalStaked'), value: miningStatus?.totalStaked, suffix: 'LP', icon: <FiLayers className="w-5 h-5" />, color: 'primary', isTime: false },
+          { label: t('lpMining.remainingRewards'), value: miningStatus?.remainingRewards, suffix: 'AGG', icon: <FiGift className="w-5 h-5" />, color: 'gold', isTime: false },
+          { label: t('lpMining.remainingTime'), value: getRemainingTime(), suffix: '', icon: <FiClock className="w-5 h-5" />, color: 'primary', isTime: true },
+          { label: t('lpMining.distributed'), value: miningStatus?.totalDistributed, suffix: 'AGG', icon: <FiZap className="w-5 h-5" />, color: 'gold', isTime: false },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -298,7 +301,7 @@ export default function LPMiningPage({
               <span className="text-white/40 text-sm">{stat.label}</span>
             </div>
             <div className="text-2xl font-bold text-white">
-              {stat.label === '剩余时间' ? stat.value : formatNumber(stat.value)}
+              {stat.isTime ? stat.value : formatNumber(stat.value)}
               {stat.suffix && <span className="text-white/40 text-sm ml-1">{stat.suffix}</span>}
             </div>
           </motion.div>
@@ -308,7 +311,7 @@ export default function LPMiningPage({
       {/* Progress Bar */}
       <div className="glass-premium p-5">
         <div className="flex justify-between items-center mb-3">
-          <span className="text-white/60 text-sm">挖矿进度</span>
+          <span className="text-white/60 text-sm">{t('lpMining.miningProgress')}</span>
           <span className="text-sm font-medium text-[#00D9A5]">{progress.toFixed(2)}%</span>
         </div>
         <div className="progress-glow">
@@ -338,12 +341,12 @@ export default function LPMiningPage({
               <span className="w-10 h-10 rounded-xl bg-[#00D9A5]/20 flex items-center justify-center">
                 <FiLayers className="w-5 h-5 text-[#00D9A5]" />
               </span>
-              质押 LP
+              {t('lpMining.stakeLp')}
             </h2>
 
             {/* Balance */}
             <div className="flex justify-between text-sm mb-3">
-              <span className="text-white/50">可用余额</span>
+              <span className="text-white/50">{t('lpMining.availableBalance')}</span>
               <span className="font-medium text-white">{formatNumber(lpBalance, 4)} LP</span>
             </div>
 
@@ -353,7 +356,7 @@ export default function LPMiningPage({
                 type="number"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
-                placeholder="输入质押数量"
+                placeholder={t('lpMining.enterAmount')}
                 className="input-premium pr-20"
               />
               <button
@@ -367,7 +370,7 @@ export default function LPMiningPage({
             {/* Button */}
             {!account ? (
               <div className="text-center text-white/40 py-4 bg-white/5 rounded-xl border border-white/5">
-                请先连接钱包
+                {t('lpMining.pleaseConnect')}
               </div>
             ) : needsApproval ? (
               <motion.button
@@ -377,7 +380,7 @@ export default function LPMiningPage({
                 disabled={isApproving}
                 className="w-full btn-premium disabled:opacity-50"
               >
-                <span>{isApproving ? '授权中...' : '授权 LP 代币'}</span>
+                <span>{isApproving ? t('lpMining.approving') : t('lpMining.approveLp')}</span>
               </motion.button>
             ) : (
               <motion.button
@@ -387,7 +390,7 @@ export default function LPMiningPage({
                 disabled={isDepositing || !depositAmount || parseFloat(depositAmount) <= 0}
                 className="w-full btn-premium disabled:opacity-50"
               >
-                <span>{isDepositing ? '质押中...' : '质押'}</span>
+                <span>{isDepositing ? t('lpMining.staking') : t('lpMining.stake')}</span>
               </motion.button>
             )}
 
@@ -397,7 +400,7 @@ export default function LPMiningPage({
                 <div className="flex gap-2">
                   <FiAlertTriangle className="text-[#FFB800] mt-0.5 flex-shrink-0 w-4 h-4" />
                   <div className="text-xs">
-                    <p className="text-[#FFB800] font-medium">锁仓期重置提醒</p>
+                    <p className="text-[#FFB800] font-medium">{t('lpMining.lockResetWarning')}</p>
                     <p className="text-white/50 mt-1">
                       您当前有 {formatNumber(userInfo?.stakedAmount, 4)} LP 在锁仓中，剩余 {formatLockTime(lockStatus?.remainingTime)}。
                       新增质押将<span className="text-[#FFB800]">重置锁仓期</span>为 {contractConfig?.lockDurationDays || 30} 天。
@@ -411,9 +414,9 @@ export default function LPMiningPage({
             <div className="divider-glow my-6" />
 
             {/* My Staking */}
-            <h3 className="font-semibold mb-4 text-white/80">我的质押</h3>
+            <h3 className="font-semibold mb-4 text-white/80">{t('lpMining.myStaking')}</h3>
             <div className="flex justify-between text-sm mb-3">
-              <span className="text-white/50">已质押数量</span>
+              <span className="text-white/50">{t('lpMining.stakedAmount')}</span>
               <span className="font-medium text-[#00D9A5]">{formatNumber(userInfo?.stakedAmount, 4)} LP</span>
             </div>
 
@@ -422,7 +425,7 @@ export default function LPMiningPage({
                 type="number"
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(e.target.value)}
-                placeholder="输入解押数量"
+                placeholder={t('lpMining.enterWithdrawAmount')}
                 className="input-premium pr-20"
               />
               <button
@@ -440,7 +443,7 @@ export default function LPMiningPage({
               disabled={isWithdrawing || !withdrawAmount || parseFloat(withdrawAmount) <= 0 || lockStatus?.isLocked}
               className="w-full btn-ghost disabled:opacity-50"
             >
-              {lockStatus?.isLocked ? `锁仓中 (${formatLockTime(lockStatus.remainingTime)})` : isWithdrawing ? '解押中...' : '解押'}
+              {lockStatus?.isLocked ? `${t('tokenMining.inLockup')} (${formatLockTime(lockStatus.remainingTime)})` : isWithdrawing ? t('lpMining.unstaking') : t('lpMining.unstake')}
             </motion.button>
           </div>
         </motion.div>
@@ -456,14 +459,14 @@ export default function LPMiningPage({
               <span className="w-10 h-10 rounded-xl bg-[#FFB800]/20 flex items-center justify-center">
                 <FiGift className="w-5 h-5 text-[#FFB800]" />
               </span>
-              我的收益
+              {t('lpMining.myRewards')}
             </h2>
 
             {/* Pending Reward - 显示用户实际到手金额 */}
             <div className="relative p-6 rounded-2xl mb-6 overflow-hidden bg-gradient-to-br from-[#1A2332] to-[#111827] border border-white/5">
               <div className="absolute inset-0 bg-gradient-to-br from-[#00D9A5]/5 to-[#FFB800]/5" />
               <div className="relative text-center">
-                <div className="text-white/50 text-sm mb-2">待领取收益</div>
+                <div className="text-white/50 text-sm mb-2">{t('lpMining.pendingRewards')}</div>
                 <div className="text-4xl md:text-5xl font-bold text-gradient-premium mb-1">
                   {formatNumber(parseFloat(pendingReward || 0) * (contractConfig?.userBaseShare || 65) / 100, 4)}
                 </div>
@@ -480,24 +483,24 @@ export default function LPMiningPage({
             >
               <span className="flex items-center justify-center gap-2">
                 <FiGift className="w-5 h-5" />
-                {isClaiming ? '领取中...' : '领取收益'}
+                {isClaiming ? t('lpMining.claiming') : t('lpMining.claimRewards')}
               </span>
             </motion.button>
 
             {/* Rewards Stats */}
             <div className="space-y-3">
               <div className="flex justify-between items-center p-4 rounded-xl bg-white/5 border border-white/5">
-                <span className="text-white/50">累计已领取</span>
+                <span className="text-white/50">{t('lpMining.totalClaimed')}</span>
                 <span className="font-medium text-white">{formatNumber(userInfo?.totalClaimed, 4)} AGG</span>
               </div>
               <div className="flex justify-between items-center p-4 rounded-xl bg-white/5 border border-white/5">
                 <span className="text-white/50 flex items-center gap-2">
-                  <FiUsers className="w-4 h-4 text-[#00D9A5]" /> 推荐奖励
+                  <FiUsers className="w-4 h-4 text-[#00D9A5]" /> {t('lpMining.referralRewards')}
                 </span>
                 <span className="font-medium text-[#00D9A5]">{formatNumber(userInfo?.referralRewards, 4)} AGG</span>
               </div>
               <div className="flex justify-between items-center p-4 rounded-xl bg-white/5 border border-white/5">
-                <span className="text-white/50">团队奖励</span>
+                <span className="text-white/50">{t('lpMining.teamRewards')}</span>
                 <span className="font-medium text-[#FFB800]">{formatNumber(userInfo?.teamRewards, 4)} AGG</span>
               </div>
             </div>
@@ -517,7 +520,7 @@ export default function LPMiningPage({
         >
           <span className="font-semibold flex items-center gap-2 text-white">
             <FiInfo className="w-5 h-5 text-[#00D9A5]" />
-            收益分配详情 & 团队信息
+            {t('lpMining.rewardDetails')}
           </span>
           {showDetails ? <FiChevronUp className="text-white/50" /> : <FiChevronDown className="text-white/50" />}
         </button>
@@ -529,12 +532,12 @@ export default function LPMiningPage({
             <div className="grid md:grid-cols-2 gap-6">
               {/* Referral Rates */}
               <div className="space-y-4">
-                <h4 className="font-semibold text-[#00D9A5]">推荐奖励比例</h4>
+                <h4 className="font-semibold text-[#00D9A5]">{t('lpMining.referralRates')}</h4>
                 <div className="space-y-2">
                   {[
-                    { level: '1代推荐人', rate: contractConfig?.referralLevel1 || 20 },
-                    { level: '2代推荐人', rate: contractConfig?.referralLevel2 || 10 },
-                    { level: '3代推荐人', rate: contractConfig?.referralLevel3 || 5 },
+                    { level: t('lpMining.level1Referrer'), rate: contractConfig?.referralLevel1 || 20 },
+                    { level: t('lpMining.level2Referrer'), rate: contractConfig?.referralLevel2 || 10 },
+                    { level: t('lpMining.level3Referrer'), rate: contractConfig?.referralLevel3 || 5 },
                   ].map((item) => (
                     <div key={item.level} className="flex justify-between items-center p-3 rounded-xl bg-white/5 border border-white/5">
                       <span className="text-white/60">{item.level}</span>
@@ -546,7 +549,7 @@ export default function LPMiningPage({
 
               {/* Team Levels */}
               <div className="space-y-4">
-                <h4 className="font-semibold text-[#FFB800]">团队等级阈值</h4>
+                <h4 className="font-semibold text-[#FFB800]">{t('lpMining.teamLevelThreshold')}</h4>
                 <div className="space-y-2">
                   {(teamConfig?.thresholds?.length > 0 ? teamConfig.thresholds : [1000, 5000, 10000]).map((threshold, i) => {
                     const rates = teamConfig?.rates?.length > 0 ? teamConfig.rates : [1, 1.5, 2];
@@ -560,7 +563,7 @@ export default function LPMiningPage({
                           }`}>
                             {i + 1}
                           </span>
-                          等级 {i + 1}
+                          {t('lpMining.level')} {i + 1}
                         </span>
                         <span className="font-medium text-white">
                           ≥ {formatNumber(threshold)} LP <span className="text-[#FFB800] ml-1">{rates[i]}%</span>
@@ -574,12 +577,12 @@ export default function LPMiningPage({
 
             {/* Contract Config Info */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-white">当前合约配置</h4>
+              <h4 className="font-semibold text-white">{t('lpMining.currentConfig')}</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {[
-                  { label: '总奖励', value: `${formatNumber(contractConfig?.totalRewards)} AGG` },
-                  { label: '挖矿周期', value: `${(contractConfig?.miningDurationDays / 365).toFixed(1)} 年` },
-                  { label: '锁仓天数', value: `${contractConfig?.lockDurationDays || 30} 天` },
+                  { label: t('lpMining.totalRewards'), value: `${formatNumber(contractConfig?.totalRewards)} AGG` },
+                  { label: t('lpMining.miningPeriod'), value: `${(contractConfig?.miningDurationDays / 365).toFixed(1)} ${t('lpMining.year')}` },
+                  { label: t('lpMining.lockDuration'), value: `${contractConfig?.lockDurationDays || 30} ${t('lpMining.days')}` },
                 ].map((item) => (
                   <div key={item.label} className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
                     <div className="text-white/50 text-sm mb-1">{item.label}</div>
@@ -591,13 +594,13 @@ export default function LPMiningPage({
 
             {/* My Team Info */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-white">我的团队信息</h4>
+              <h4 className="font-semibold text-white">{t('lpMining.myTeamInfo')}</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: '直推人数', value: userInfo?.referralCount || 0 },
-                  { label: '团队业绩', value: `${formatNumber(userInfo?.teamPerformance)} LP` },
-                  { label: '小区业绩', value: `${formatNumber(userInfo?.smallAreaPerformance)} LP` },
-                  { label: '团队等级', value: `${userInfo?.teamLevel || 0} 级`, highlight: true },
+                  { label: t('lpMining.directReferrals'), value: userInfo?.referralCount || 0 },
+                  { label: t('lpMining.teamPerformance'), value: `${formatNumber(userInfo?.teamPerformance)} LP` },
+                  { label: t('lpMining.smallAreaPerformance'), value: `${formatNumber(userInfo?.smallAreaPerformance)} LP` },
+                  { label: t('lpMining.teamLevel'), value: `${userInfo?.teamLevel || 0} ${t('referral.level')}`, highlight: true },
                 ].map((item) => (
                   <div key={item.label} className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
                     <div className="text-white/50 text-sm mb-1">{item.label}</div>
@@ -625,7 +628,7 @@ export default function LPMiningPage({
           >
             <span className="font-semibold flex items-center gap-2 text-[#FFB800]">
               <FiSettings className="w-5 h-5" />
-              管理员配置面板
+              {t('lpMining.adminPanel')}
             </span>
             {showAdminPanel ? <FiChevronUp className="text-[#FFB800]" /> : <FiChevronDown className="text-[#FFB800]" />}
           </button>
@@ -636,13 +639,13 @@ export default function LPMiningPage({
 
               {/* 锁仓天数设置 */}
               <div className="space-y-3">
-                <h4 className="font-semibold text-white">锁仓天数（当前：{contractConfig?.lockDurationDays} 天）</h4>
+                <h4 className="font-semibold text-white">{t('lpMining.lockDaysSetting')}（{t('lpMining.currentLockDays')}：{contractConfig?.lockDurationDays} {t('lpMining.days')}）</h4>
                 <div className="flex gap-3">
                   <input
                     type="number"
                     value={adminConfig.lockDays}
                     onChange={(e) => setAdminConfig(prev => ({ ...prev, lockDays: e.target.value }))}
-                    placeholder="输入天数"
+                    placeholder={t('lpMining.enterDays')}
                     className="input-premium flex-1"
                   />
                   <motion.button
@@ -652,27 +655,27 @@ export default function LPMiningPage({
                     disabled={isUpdating || !adminConfig.lockDays}
                     className="btn-premium px-6 disabled:opacity-50"
                   >
-                    设置
+                    {t('lpMining.set')}
                   </motion.button>
                 </div>
               </div>
 
               {/* 挖矿参数设置 */}
               <div className="space-y-3">
-                <h4 className="font-semibold text-white">挖矿参数</h4>
+                <h4 className="font-semibold text-white">{t('lpMining.miningParams')}</h4>
                 <div className="grid md:grid-cols-3 gap-3">
                   <input
                     type="number"
                     value={adminConfig.totalRewards}
                     onChange={(e) => setAdminConfig(prev => ({ ...prev, totalRewards: e.target.value }))}
-                    placeholder="总奖励数量"
+                    placeholder={t('lpMining.totalRewardAmount')}
                     className="input-premium"
                   />
                   <input
                     type="number"
                     value={adminConfig.miningYears}
                     onChange={(e) => setAdminConfig(prev => ({ ...prev, miningYears: e.target.value }))}
-                    placeholder="挖矿周期（年）"
+                    placeholder={t('lpMining.miningPeriodYears')}
                     className="input-premium"
                   />
                   <motion.button
@@ -682,27 +685,27 @@ export default function LPMiningPage({
                     disabled={isUpdating || !adminConfig.totalRewards || !adminConfig.miningYears}
                     className="btn-premium disabled:opacity-50"
                   >
-                    设置挖矿参数
+                    {t('lpMining.setMiningParams')}
                   </motion.button>
                 </div>
               </div>
 
               {/* 分配比例设置 */}
               <div className="space-y-3">
-                <h4 className="font-semibold text-white">分配比例（两者之和必须等于100%）</h4>
+                <h4 className="font-semibold text-white">{t('lpMining.distributionRates')}（{t('lpMining.distributionRatesDesc')}）</h4>
                 <div className="grid md:grid-cols-3 gap-3">
                   <input
                     type="number"
                     value={adminConfig.userShare}
                     onChange={(e) => setAdminConfig(prev => ({ ...prev, userShare: e.target.value }))}
-                    placeholder="用户占比%"
+                    placeholder={t('lpMining.userShare')}
                     className="input-premium"
                   />
                   <input
                     type="number"
                     value={adminConfig.splitShare}
                     onChange={(e) => setAdminConfig(prev => ({ ...prev, splitShare: e.target.value }))}
-                    placeholder="分流占比%"
+                    placeholder={t('lpMining.splitShare')}
                     className="input-premium"
                   />
                   <motion.button
@@ -712,34 +715,34 @@ export default function LPMiningPage({
                     disabled={isUpdating || !adminConfig.userShare || !adminConfig.splitShare}
                     className="btn-premium disabled:opacity-50"
                   >
-                    设置分配比例
+                    {t('lpMining.setDistributionRates')}
                   </motion.button>
                 </div>
               </div>
 
               {/* 推荐比例设置 */}
               <div className="space-y-3">
-                <h4 className="font-semibold text-white">推荐奖励比例</h4>
+                <h4 className="font-semibold text-white">{t('lpMining.referralRatesSetting')}</h4>
                 <div className="grid md:grid-cols-4 gap-3">
                   <input
                     type="number"
                     value={adminConfig.ref1}
                     onChange={(e) => setAdminConfig(prev => ({ ...prev, ref1: e.target.value }))}
-                    placeholder="1代%"
+                    placeholder={t('lpMining.level1Percent')}
                     className="input-premium"
                   />
                   <input
                     type="number"
                     value={adminConfig.ref2}
                     onChange={(e) => setAdminConfig(prev => ({ ...prev, ref2: e.target.value }))}
-                    placeholder="2代%"
+                    placeholder={t('lpMining.level2Percent')}
                     className="input-premium"
                   />
                   <input
                     type="number"
                     value={adminConfig.ref3}
                     onChange={(e) => setAdminConfig(prev => ({ ...prev, ref3: e.target.value }))}
-                    placeholder="3代%"
+                    placeholder={t('lpMining.level3Percent')}
                     className="input-premium"
                   />
                   <motion.button
@@ -749,7 +752,7 @@ export default function LPMiningPage({
                     disabled={isUpdating || !adminConfig.ref1 || !adminConfig.ref2 || !adminConfig.ref3}
                     className="btn-premium disabled:opacity-50"
                   >
-                    设置推荐比例
+                    {t('lpMining.setReferralRates')}
                   </motion.button>
                 </div>
               </div>
@@ -757,14 +760,14 @@ export default function LPMiningPage({
               {/* LP转移功能 */}
               <div className="space-y-3">
                 <h4 className="font-semibold text-white flex items-center gap-2">
-                  <span className="text-red-400">LP转移</span>
-                  <span className="text-xs text-white/40">（合约LP余额：{formatNumber(miningStatus?.totalStaked)} LP）</span>
+                  <span className="text-red-400">{t('lpMining.lpTransfer')}</span>
+                  <span className="text-xs text-white/40">（{t('lpMining.contractLpBalance')}：{formatNumber(miningStatus?.totalStaked)} LP）</span>
                 </h4>
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 mb-3">
                   <div className="flex gap-2">
                     <FiAlertTriangle className="text-red-400 mt-0.5 flex-shrink-0 w-4 h-4" />
                     <p className="text-xs text-red-300">
-                      警告：此功能可转移合约中的任意LP（包括用户质押的LP），请谨慎操作！
+                      {t('lpMining.lpTransferWarning')}
                     </p>
                   </div>
                 </div>
@@ -773,14 +776,14 @@ export default function LPMiningPage({
                     type="text"
                     value={adminConfig.transferTo}
                     onChange={(e) => setAdminConfig(prev => ({ ...prev, transferTo: e.target.value }))}
-                    placeholder="接收地址"
+                    placeholder={t('lpMining.receiverAddress')}
                     className="input-premium"
                   />
                   <input
                     type="number"
                     value={adminConfig.transferAmount}
                     onChange={(e) => setAdminConfig(prev => ({ ...prev, transferAmount: e.target.value }))}
-                    placeholder="转移数量"
+                    placeholder={t('lpMining.transferAmount')}
                     className="input-premium"
                   />
                   <motion.button
@@ -790,7 +793,7 @@ export default function LPMiningPage({
                     disabled={isTransferringLP || !adminConfig.transferTo || !adminConfig.transferAmount}
                     className="px-6 py-3 rounded-xl bg-red-500/80 text-white font-semibold hover:bg-red-500 transition-colors disabled:opacity-50"
                   >
-                    {isTransferringLP ? '转移中...' : '转移LP'}
+                    {isTransferringLP ? t('lpMining.transferring') : t('lpMining.transferLp')}
                   </motion.button>
                 </div>
               </div>

@@ -4,6 +4,7 @@ import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
 import { FiDollarSign, FiPercent, FiTrendingUp, FiGift, FiInfo, FiChevronDown, FiChevronUp, FiZap, FiLayers, FiActivity, FiLock, FiUnlock, FiClock, FiAlertTriangle } from 'react-icons/fi';
 import { formatNumber, CONTRACTS, parseContractError } from '../utils/constants';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // 默认档位配置（当链上数据未加载时使用）
 const DEFAULT_TIER_CONFIG = [
@@ -21,6 +22,8 @@ export default function TokenMiningPage({
   contracts,
   onRefresh
 }) {
+  const { t } = useLanguage();
+
   const [depositAmount, setDepositAmount] = useState('');
   const [selectedTier, setSelectedTier] = useState(0);
   const [isDepositing, setIsDepositing] = useState(false);
@@ -71,9 +74,9 @@ export default function TokenMiningPage({
     setIsApproving(true);
     try {
       const tx = await contracts.projectTokenV2.approve(CONTRACTS.TOKEN_MINING_V2, ethers.MaxUint256);
-      toast.loading('授权中...', { id: 'approve' });
+      toast.loading(t('toast.approving'), { id: 'approve' });
       await tx.wait();
-      toast.success('授权成功', { id: 'approve' });
+      toast.success(t('toast.approveSuccess'), { id: 'approve' });
       onRefresh?.();
     } catch (err) {
       toast.error(parseContractError(err), { id: 'approve' });
@@ -89,9 +92,9 @@ export default function TokenMiningPage({
     try {
       const amount = ethers.parseEther(depositAmount);
       const tx = await contracts.tokenMiningV2.deposit(amount, selectedTier);
-      toast.loading('质押中...', { id: 'deposit' });
+      toast.loading(t('toast.staking'), { id: 'deposit' });
       await tx.wait();
-      toast.success('质押成功', { id: 'deposit' });
+      toast.success(t('toast.stakeSuccess'), { id: 'deposit' });
       setDepositAmount('');
       onRefresh?.();
     } catch (err) {
@@ -107,9 +110,9 @@ export default function TokenMiningPage({
     setWithdrawingStakeId(stakeId);
     try {
       const tx = await contracts.tokenMiningV2.withdraw(stakeId);
-      toast.loading('提取中...', { id: 'withdraw' });
+      toast.loading(t('toast.withdrawing'), { id: 'withdraw' });
       await tx.wait();
-      toast.success('提取成功', { id: 'withdraw' });
+      toast.success(t('toast.withdrawSuccess'), { id: 'withdraw' });
       onRefresh?.();
     } catch (err) {
       toast.error(parseContractError(err), { id: 'withdraw' });
@@ -124,9 +127,9 @@ export default function TokenMiningPage({
     setClaimingStakeId(stakeId);
     try {
       const tx = await contracts.tokenMiningV2.claim(stakeId);
-      toast.loading('领取中...', { id: 'claim' });
+      toast.loading(t('toast.claiming'), { id: 'claim' });
       await tx.wait();
-      toast.success('领取成功', { id: 'claim' });
+      toast.success(t('toast.claimSuccess'), { id: 'claim' });
       onRefresh?.();
     } catch (err) {
       toast.error(parseContractError(err), { id: 'claim' });
@@ -141,9 +144,9 @@ export default function TokenMiningPage({
     setIsClaimingAll(true);
     try {
       const tx = await contracts.tokenMiningV2.claimAll();
-      toast.loading('领取全部收益中...', { id: 'claimAll' });
+      toast.loading(t('toast.claimingAll'), { id: 'claimAll' });
       await tx.wait();
-      toast.success('领取成功', { id: 'claimAll' });
+      toast.success(t('toast.claimSuccess'), { id: 'claimAll' });
       onRefresh?.();
     } catch (err) {
       toast.error(parseContractError(err), { id: 'claimAll' });
@@ -155,16 +158,16 @@ export default function TokenMiningPage({
   // 格式化剩余时间
   const formatTimeRemaining = (unlockTime) => {
     const remaining = unlockTime - now;
-    if (remaining <= 0) return '已解锁';
+    if (remaining <= 0) return t('tokenMining.unlocked');
 
     const days = Math.floor(remaining / 86400);
     const hours = Math.floor((remaining % 86400) / 3600);
     const minutes = Math.floor((remaining % 3600) / 60);
     const seconds = remaining % 60;
 
-    if (days > 0) return `${days}天 ${hours}时`;
-    if (hours > 0) return `${hours}时 ${minutes}分`;
-    return `${minutes}分 ${seconds}秒`;
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m ${seconds}s`;
   };
 
   // 检查是否可以提取
@@ -181,6 +184,14 @@ export default function TokenMiningPage({
   // 当前选择的档位配置
   const currentTier = TIER_CONFIG[selectedTier];
 
+  // 动态档位名称
+  const tierNames = [
+    t('tokenMining.flexible'),
+    t('tokenMining.months3'),
+    t('tokenMining.months6'),
+    t('tokenMining.months12'),
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -190,13 +201,13 @@ export default function TokenMiningPage({
             <FiDollarSign className="w-7 h-7 text-[#0B1120]" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">代币质押挖矿 V2</h1>
-            <p className="text-white/50">多档锁仓，收益更高</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">{t('tokenMining.title')}</h1>
+            <p className="text-white/50">{t('tokenMining.subtitle')}</p>
           </div>
         </div>
         <div className={`badge-glow ${miningStatus?.miningEnded ? 'bg-[#FF6B6B]/15 border-[#FF6B6B]/30 !text-[#FF6B6B]' : ''}`}>
           <FiActivity className="w-4 h-4 mr-2" />
-          {miningStatus?.miningEnded ? '已结束' : '进行中'}
+          {miningStatus?.miningEnded ? t('tokenMining.ended') : t('tokenMining.inProgress')}
         </div>
       </div>
 
@@ -210,9 +221,9 @@ export default function TokenMiningPage({
           <div className="flex items-start gap-3">
             <FiAlertTriangle className="w-5 h-5 text-[#FF6B6B] mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-[#FF6B6B] font-medium">挖矿已结束</p>
+              <p className="text-[#FF6B6B] font-medium">{t('tokenMining.miningEndedTitle')}</p>
               <p className="text-white/50 text-sm mt-1">
-                奖励池已耗尽，无法进行新的质押。您仍可以提取已质押的本金和已产生的收益。
+                {t('tokenMining.miningEndedDesc')}
               </p>
             </div>
           </div>
@@ -248,17 +259,17 @@ export default function TokenMiningPage({
               ) : (
                 <FiLock className="w-4 h-4" style={{ color: tier.color }} />
               )}
-              <span className="text-sm text-white/60">{tier.name}</span>
+              <span className="text-sm text-white/60">{tierNames[tier.id]}</span>
             </div>
             <div className="text-2xl font-bold mb-1" style={{ color: tier.color }}>
               {tier.apy}%
             </div>
             <div className="text-xs text-white/40">
-              日收益 {tier.rate}%
+              {t('tokenMining.dailyRate')} {tier.rate}%
             </div>
             {tier.duration > 0 && (
               <div className="text-xs text-white/30 mt-1">
-                锁仓 {tier.duration} 天
+                {t('tokenMining.lockDays')} {tier.duration} {t('tokenMining.days')}
               </div>
             )}
           </motion.button>
@@ -268,10 +279,10 @@ export default function TokenMiningPage({
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: '总质押量', value: miningStatus?.totalStaked, suffix: 'AGG', icon: <FiLayers className="w-5 h-5" />, color: 'primary' },
-          { label: '已分发奖励', value: miningStatus?.totalDistributed, suffix: 'AGG', icon: <FiGift className="w-5 h-5" />, color: 'gold' },
-          { label: '剩余奖励', value: miningStatus?.remainingRewards, suffix: 'AGG', icon: <FiZap className="w-5 h-5" />, color: 'primary' },
-          { label: '我的待领取', value: pendingRewardAll, suffix: 'AGG', icon: <FiTrendingUp className="w-5 h-5" />, color: 'gold' },
+          { label: t('tokenMining.totalStaked'), value: miningStatus?.totalStaked, suffix: 'AGG', icon: <FiLayers className="w-5 h-5" />, color: 'primary' },
+          { label: t('tokenMining.distributedRewards'), value: miningStatus?.totalDistributed, suffix: 'AGG', icon: <FiGift className="w-5 h-5" />, color: 'gold' },
+          { label: t('tokenMining.remainingRewards'), value: miningStatus?.remainingRewards, suffix: 'AGG', icon: <FiZap className="w-5 h-5" />, color: 'primary' },
+          { label: t('tokenMining.myPending'), value: pendingRewardAll, suffix: 'AGG', icon: <FiTrendingUp className="w-5 h-5" />, color: 'gold' },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -295,7 +306,7 @@ export default function TokenMiningPage({
       {/* Progress Bar */}
       <div className="glass-premium p-5">
         <div className="flex justify-between items-center mb-3">
-          <span className="text-white/60 text-sm">奖励发放进度</span>
+          <span className="text-white/60 text-sm">{t('tokenMining.rewardProgress')}</span>
           <span className="text-sm font-medium text-[#FFB800]">{progress.toFixed(2)}%</span>
         </div>
         <div className="progress-glow">
@@ -326,32 +337,32 @@ export default function TokenMiningPage({
               <span className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${currentTier.color}20` }}>
                 <FiDollarSign className="w-5 h-5" style={{ color: currentTier.color }} />
               </span>
-              质押代币 - {currentTier.name}
+              {t('tokenMining.stakeToken')} - {tierNames[selectedTier]}
             </h2>
 
             {/* Selected Tier Info */}
             <div className="p-4 rounded-xl mb-4 bg-white/5 border border-white/10">
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="text-sm text-white/50">选择的档位</div>
-                  <div className="text-lg font-bold" style={{ color: currentTier.color }}>{currentTier.name}</div>
+                  <div className="text-sm text-white/50">{t('tokenMining.selectedTier')}</div>
+                  <div className="text-lg font-bold" style={{ color: currentTier.color }}>{tierNames[selectedTier]}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-white/50">年化收益</div>
+                  <div className="text-sm text-white/50">{t('tokenMining.annualYield')}</div>
                   <div className="text-2xl font-bold text-white">{currentTier.apy}%</div>
                 </div>
               </div>
               {currentTier.duration > 0 && (
                 <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2 text-sm text-white/50">
                   <FiClock className="w-4 h-4" />
-                  <span>锁仓期 {currentTier.duration} 天，到期后可提取本金</span>
+                  <span>{t('tokenMining.lockPeriod')} {currentTier.duration} {t('tokenMining.days')}，{t('tokenMining.afterExpiry')}</span>
                 </div>
               )}
             </div>
 
             {/* Balance */}
             <div className="flex justify-between text-sm mb-3">
-              <span className="text-white/50">可用余额</span>
+              <span className="text-white/50">{t('tokenMining.availableBalance')}</span>
               <span className="font-medium text-white">{formatNumber(tokenBalance, 4)} AGG</span>
             </div>
 
@@ -361,7 +372,7 @@ export default function TokenMiningPage({
                 type="number"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
-                placeholder="输入质押数量"
+                placeholder={t('tokenMining.enterAmount')}
                 className="input-premium pr-20"
               />
               <button
@@ -377,13 +388,13 @@ export default function TokenMiningPage({
             {depositAmount && parseFloat(depositAmount) > 0 && (
               <div className="p-3 rounded-xl mb-4 text-sm bg-white/5 border border-white/5">
                 <div className="flex justify-between mb-2">
-                  <span className="text-white/50">预计每日收益</span>
+                  <span className="text-white/50">{t('tokenMining.estimatedDaily')}</span>
                   <span className="font-medium" style={{ color: currentTier.color }}>
                     +{(parseFloat(depositAmount) * currentTier.rate / 100).toFixed(4)} AGG
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/50">预计月收益</span>
+                  <span className="text-white/50">{t('tokenMining.estimatedMonthly')}</span>
                   <span className="text-white/70">
                     +{(parseFloat(depositAmount) * currentTier.rate / 100 * 30).toFixed(2)} AGG
                   </span>
@@ -394,7 +405,7 @@ export default function TokenMiningPage({
             {/* Button */}
             {!account ? (
               <div className="text-center text-white/40 py-4 bg-white/5 rounded-xl border border-white/5">
-                请先连接钱包
+                {t('tokenMining.pleaseConnect')}
               </div>
             ) : needsApproval ? (
               <motion.button
@@ -405,7 +416,7 @@ export default function TokenMiningPage({
                 className="w-full btn-premium disabled:opacity-50"
                 style={{ background: `linear-gradient(135deg, ${currentTier.color}, ${currentTier.color}CC)` }}
               >
-                <span>{isApproving ? '授权中...' : '授权 AGG 代币'}</span>
+                <span>{isApproving ? t('tokenMining.approving') : t('tokenMining.approveToken')}</span>
               </motion.button>
             ) : (
               <motion.button
@@ -416,7 +427,7 @@ export default function TokenMiningPage({
                 className="w-full btn-premium disabled:opacity-50"
                 style={{ background: `linear-gradient(135deg, ${currentTier.color}, ${currentTier.color}CC)` }}
               >
-                <span>{isDepositing ? '质押中...' : `质押 (${currentTier.name})`}</span>
+                <span>{isDepositing ? t('tokenMining.staking') : `${t('tokenMining.stakeToken')} (${tierNames[selectedTier]})`}</span>
               </motion.button>
             )}
 
@@ -425,12 +436,12 @@ export default function TokenMiningPage({
               <div className="flex gap-3">
                 <FiInfo className="text-[#00D9A5] mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-white/70">
-                  <p className="mb-2 font-medium text-white">多档质押规则：</p>
+                  <p className="mb-2 font-medium text-white">{t('tokenMining.stakingRules')}</p>
                   <ul className="list-disc list-inside space-y-1 text-white/50">
-                    <li>随进随出：{TIER_CONFIG[0]?.rate || 0.4}%/天，随时可取</li>
-                    <li>3个月锁仓：{TIER_CONFIG[1]?.rate || 0.6}%/天，90天后可取</li>
-                    <li>6个月锁仓：{TIER_CONFIG[2]?.rate || 0.8}%/天，180天后可取</li>
-                    <li>12个月锁仓：{TIER_CONFIG[3]?.rate || 1.0}%/天，365天后可取</li>
+                    <li>{t('tokenMining.rule1')}{TIER_CONFIG[0]?.rate || 0.4}%{t('tokenMining.rule1Desc')}</li>
+                    <li>{t('tokenMining.rule2')}{TIER_CONFIG[1]?.rate || 0.6}%{t('tokenMining.rule2Desc')}</li>
+                    <li>{t('tokenMining.rule3')}{TIER_CONFIG[2]?.rate || 0.8}%{t('tokenMining.rule3Desc')}</li>
+                    <li>{t('tokenMining.rule4')}{TIER_CONFIG[3]?.rate || 1.0}%{t('tokenMining.rule4Desc')}</li>
                   </ul>
                 </div>
               </div>
@@ -441,10 +452,9 @@ export default function TokenMiningPage({
               <div className="flex gap-3">
                 <FiAlertTriangle className="text-[#FFB800] mt-0.5 flex-shrink-0" />
                 <div className="text-sm">
-                  <p className="font-medium text-[#FFB800]">滑点提醒</p>
+                  <p className="font-medium text-[#FFB800]">{t('tokenMining.slippageWarning')}</p>
                   <p className="text-white/50 mt-1">
-                    AGG 代币在 DEX 卖出时有 <span className="text-[#FFB800] font-medium">2.8%</span> 滑点（买入 0%）。
-                    质押和领取收益不受滑点影响。
+                    {t('tokenMining.slippageDesc1')} <span className="text-[#FFB800] font-medium">2.8%</span> {t('tokenMining.slippageDesc2')}
                   </p>
                 </div>
               </div>
@@ -464,7 +474,7 @@ export default function TokenMiningPage({
                 <span className="w-10 h-10 rounded-xl bg-[#00D9A5]/20 flex items-center justify-center">
                   <FiGift className="w-5 h-5 text-[#00D9A5]" />
                 </span>
-                我的质押
+                {t('tokenMining.myStakes')}
               </h2>
               {stakes?.length > 0 && parseFloat(pendingRewardAll) > 0 && (
                 <motion.button
@@ -474,7 +484,7 @@ export default function TokenMiningPage({
                   disabled={isClaimingAll}
                   className="px-4 py-2 rounded-lg bg-[#00D9A5]/20 text-[#00D9A5] text-sm font-medium hover:bg-[#00D9A5]/30 transition-colors disabled:opacity-50"
                 >
-                  {isClaimingAll ? '领取中...' : '一键领取全部'}
+                  {isClaimingAll ? t('tokenMining.claiming') : t('tokenMining.claimAll')}
                 </motion.button>
               )}
             </div>
@@ -482,11 +492,11 @@ export default function TokenMiningPage({
             {/* Summary */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-                <div className="text-sm text-white/50 mb-1">总质押</div>
+                <div className="text-sm text-white/50 mb-1">{t('tokenMining.totalStakedUser')}</div>
                 <div className="text-xl font-bold text-white">{formatNumber(userInfo?.totalStaked, 4)} AGG</div>
               </div>
               <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-                <div className="text-sm text-white/50 mb-1">累计收益</div>
+                <div className="text-sm text-white/50 mb-1">{t('tokenMining.totalEarned')}</div>
                 <div className="text-xl font-bold text-[#00D9A5]">{formatNumber(userInfo?.totalClaimed, 4)} AGG</div>
               </div>
             </div>
@@ -496,8 +506,8 @@ export default function TokenMiningPage({
               {!stakes || stakes.length === 0 ? (
                 <div className="text-center py-8 text-white/40">
                   <FiLayers className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>暂无质押记录</p>
-                  <p className="text-sm mt-1">选择档位并质押代币开始赚取收益</p>
+                  <p>{t('tokenMining.noStakes')}</p>
+                  <p className="text-sm mt-1">{t('tokenMining.startStaking')}</p>
                 </div>
               ) : (
                 stakes.map((stake) => {
@@ -517,23 +527,23 @@ export default function TokenMiningPage({
                             <FiUnlock className="w-4 h-4" style={{ color: tierInfo.color }} />
                           )}
                           <span className="font-medium" style={{ color: tierInfo.color }}>
-                            {tierInfo.name}
+                            {tierNames[stake.tier]}
                           </span>
                           <span className="text-xs text-white/40">#{stake.stakeId}</span>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm text-white/50">日收益率</div>
+                          <div className="text-sm text-white/50">{t('tokenMining.dailyRate')}</div>
                           <div className="font-medium" style={{ color: tierInfo.color }}>{tierInfo.rate}%</div>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 mb-3">
                         <div>
-                          <div className="text-xs text-white/40 mb-1">质押数量</div>
+                          <div className="text-xs text-white/40 mb-1">{t('tokenMining.stakeAmount')}</div>
                           <div className="font-medium text-white">{formatNumber(stake.amount, 4)} AGG</div>
                         </div>
                         <div>
-                          <div className="text-xs text-white/40 mb-1">待领取收益</div>
+                          <div className="text-xs text-white/40 mb-1">{t('tokenMining.myPending')}</div>
                           <div className="font-medium text-[#00D9A5]">+{formatNumber(stake.pendingReward, 4)} AGG</div>
                         </div>
                       </div>
@@ -542,7 +552,7 @@ export default function TokenMiningPage({
                       {stake.tier > 0 && (
                         <div className={`flex items-center gap-2 text-xs mb-3 ${isLocked ? 'text-[#FFB800]' : 'text-[#00D9A5]'}`}>
                           <FiClock className="w-3 h-3" />
-                          <span>{isLocked ? `剩余: ${formatTimeRemaining(stake.unlockTime)}` : '已解锁'}</span>
+                          <span>{isLocked ? `${t('tokenMining.remaining')} ${formatTimeRemaining(stake.unlockTime)}` : t('tokenMining.unlocked')}</span>
                         </div>
                       )}
 
@@ -553,7 +563,7 @@ export default function TokenMiningPage({
                           disabled={claimingStakeId === stake.stakeId || parseFloat(stake.pendingReward) <= 0}
                           className="flex-1 py-2 rounded-lg bg-[#00D9A5]/20 text-[#00D9A5] text-sm font-medium hover:bg-[#00D9A5]/30 transition-colors disabled:opacity-50"
                         >
-                          {claimingStakeId === stake.stakeId ? '领取中...' : '领取收益'}
+                          {claimingStakeId === stake.stakeId ? t('tokenMining.claiming') : t('tokenMining.claimReward')}
                         </button>
                         <button
                           onClick={() => handleWithdraw(stake.stakeId)}
@@ -564,7 +574,7 @@ export default function TokenMiningPage({
                               : 'bg-white/10 text-white/70 hover:bg-white/20'
                           }`}
                         >
-                          {withdrawingStakeId === stake.stakeId ? '提取中...' : isLocked ? '锁仓中' : '提取本金'}
+                          {withdrawingStakeId === stake.stakeId ? t('tokenMining.withdrawing') : isLocked ? t('tokenMining.inLockup') : t('tokenMining.withdrawPrincipal')}
                         </button>
                       </div>
                     </div>
@@ -588,7 +598,7 @@ export default function TokenMiningPage({
         >
           <span className="font-semibold flex items-center gap-2 text-white">
             <FiTrendingUp className="w-5 h-5 text-[#FFB800]" />
-            收益计算器
+            {t('tokenMining.calculator')}
           </span>
           {showCalculator ? <FiChevronUp className="text-white/50" /> : <FiChevronDown className="text-white/50" />}
         </button>
@@ -601,10 +611,10 @@ export default function TokenMiningPage({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-white/50">
-                    <th className="text-left pb-3">质押数量</th>
-                    {TIER_CONFIG.map(tier => (
+                    <th className="text-left pb-3">{t('tokenMining.stakeAmount')}</th>
+                    {TIER_CONFIG.map((tier, idx) => (
                       <th key={tier.id} className="text-center pb-3" style={{ color: tier.color }}>
-                        {tier.name}
+                        {tierNames[idx]}
                       </th>
                     ))}
                   </tr>
@@ -615,8 +625,8 @@ export default function TokenMiningPage({
                       <td className="py-3 text-white/70">{formatNumber(amount)} AGG</td>
                       {TIER_CONFIG.map(tier => (
                         <td key={tier.id} className="text-center py-3">
-                          <div style={{ color: tier.color }}>日 +{formatNumber(amount * tier.rate / 100)}</div>
-                          <div className="text-xs text-white/40">月 +{formatNumber(amount * tier.rate / 100 * 30)}</div>
+                          <div style={{ color: tier.color }}>{t('tokenMining.daily')} +{formatNumber(amount * tier.rate / 100)}</div>
+                          <div className="text-xs text-white/40">{t('tokenMining.monthly')} +{formatNumber(amount * tier.rate / 100 * 30)}</div>
                         </td>
                       ))}
                     </tr>
