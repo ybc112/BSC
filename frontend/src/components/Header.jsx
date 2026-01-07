@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiMenu, FiX, FiExternalLink, FiShield } from 'react-icons/fi';
 import { formatAddress } from '../utils/constants';
 
-// 新的 Logo 组件 - 金融科技风格
+// AGG Logo 组件
 function Logo({ onClick }) {
   return (
     <motion.div
@@ -11,37 +11,22 @@ function Logo({ onClick }) {
       whileHover={{ scale: 1.02 }}
       onClick={onClick}
     >
-      {/* Logo 图标 - 抽象的钱币/增长图形 */}
+      {/* AGG Logo 图片 */}
       <div className="relative">
-        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#00D9A5] to-[#00B88A] flex items-center justify-center shadow-lg shadow-[#00D9A5]/30 group-hover:shadow-[#00D9A5]/50 transition-shadow">
-          {/* 内部图案 - 类似增长曲线 */}
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M3 17L9 11L13 15L21 7"
-              stroke="#0B1120"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M17 7H21V11"
-              stroke="#0B1120"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <circle cx="9" cy="11" r="2" fill="#FFB800" />
-          </svg>
-        </div>
+        <img 
+          src="/agg-logo.png" 
+          alt="AGG" 
+          className="w-11 h-11 rounded-xl shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-shadow"
+        />
         {/* 装饰性光环 */}
-        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#00D9A5] to-[#FFB800] opacity-0 group-hover:opacity-20 blur-xl transition-opacity" />
+        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-400 opacity-0 group-hover:opacity-20 blur-xl transition-opacity" />
       </div>
 
       {/* 文字部分 */}
       <div className="hidden sm:block">
         <h1 className="text-xl font-bold">
-          <span className="text-white">Yield</span>
-          <span className="text-[#00D9A5]">Vault</span>
+          <span className="text-white">AGG</span>
+          <span className="text-blue-400"> Staking</span>
         </h1>
         <p className="text-xs text-white/50 tracking-wide">BSC DeFi Protocol</p>
       </div>

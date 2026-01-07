@@ -396,7 +396,7 @@ export default function ReferralPage({
                 <div className="text-4xl font-bold text-gradient-premium mb-1">
                   {formatNumber(userInfo?.referralRewards, 4)}
                 </div>
-                <div className="text-white/40">RWT</div>
+                <div className="text-white/40">AGG</div>
               </div>
             </div>
 
@@ -486,7 +486,7 @@ export default function ReferralPage({
                 <div className="text-4xl font-bold text-gradient-gold mb-1">
                   {formatNumber(userInfo?.teamRewards, 4)}
                 </div>
-                <div className="text-white/40">RWT</div>
+                <div className="text-white/40">AGG</div>
               </div>
             </div>
 

@@ -1,0 +1,25 @@
+{
+  "network": "bscMainnet",
+  "chainId": 56,
+  "deployer": "0xbe4aE94cb80780917132c4779d8bEa4E6804d792",
+  "finalOwner": "0x4277EF1F274D6146229D2501F2e2A6ecc26f2789",
+  "deployTime": "2026-01-07T06:13:26.032Z",
+  "contracts": {
+    "projectTokenV2": "0xCd339aec4797790A8e387eF10035df0000d3a815",
+    "tokenMiningV2": "0xB4089956A0b775638e8F9F2E17deaE35B102c860"
+  },
+  "projectTokenV2Config": {
+    "name": "AGG",
+    "symbol": "AGG",
+    "totalSupply": "100000000",
+    "buyFee": "0%",
+    "sellFee": "2.8%",
+    "feeReceiver": "0x4277EF1F274D6146229D2501F2e2A6ecc26f2789"
+  },
+  "tokenMiningV2Config": {
+    "stakingToken": "0xCd339aec4797790A8e387eF10035df0000d3a815",
+    "rewardToken": "0xCd339aec4797790A8e387eF10035df0000d3a815",
+    "startTime": 1767766705,
+    "totalRewards": "30000000"
+  }
+}

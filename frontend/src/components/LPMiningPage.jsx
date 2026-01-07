@@ -282,9 +282,9 @@ export default function LPMiningPage({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: '总质押量', value: miningStatus?.totalStaked, suffix: 'LP', icon: <FiLayers className="w-5 h-5" />, color: 'primary' },
-          { label: '剩余奖励', value: miningStatus?.remainingRewards, suffix: 'RWT', icon: <FiGift className="w-5 h-5" />, color: 'gold' },
+          { label: '剩余奖励', value: miningStatus?.remainingRewards, suffix: 'AGG', icon: <FiGift className="w-5 h-5" />, color: 'gold' },
           { label: '剩余时间', value: getRemainingTime(), suffix: '', icon: <FiClock className="w-5 h-5" />, color: 'primary' },
-          { label: '已分发', value: miningStatus?.totalDistributed, suffix: 'RWT', icon: <FiZap className="w-5 h-5" />, color: 'gold' },
+          { label: '已分发', value: miningStatus?.totalDistributed, suffix: 'AGG', icon: <FiZap className="w-5 h-5" />, color: 'gold' },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -321,7 +321,7 @@ export default function LPMiningPage({
         </div>
         <div className="flex justify-between text-xs text-white/40 mt-2">
           <span>0</span>
-          <span>{formatNumber(totalRewardsNum)} RWT</span>
+          <span>{formatNumber(totalRewardsNum)} AGG</span>
         </div>
       </div>
 
@@ -467,7 +467,7 @@ export default function LPMiningPage({
                 <div className="text-4xl md:text-5xl font-bold text-gradient-premium mb-1">
                   {formatNumber(parseFloat(pendingReward || 0) * (contractConfig?.userBaseShare || 65) / 100, 4)}
                 </div>
-                <div className="text-white/40">RWT</div>
+                <div className="text-white/40">AGG</div>
               </div>
             </div>
 
@@ -488,17 +488,17 @@ export default function LPMiningPage({
             <div className="space-y-3">
               <div className="flex justify-between items-center p-4 rounded-xl bg-white/5 border border-white/5">
                 <span className="text-white/50">累计已领取</span>
-                <span className="font-medium text-white">{formatNumber(userInfo?.totalClaimed, 4)} RWT</span>
+                <span className="font-medium text-white">{formatNumber(userInfo?.totalClaimed, 4)} AGG</span>
               </div>
               <div className="flex justify-between items-center p-4 rounded-xl bg-white/5 border border-white/5">
                 <span className="text-white/50 flex items-center gap-2">
                   <FiUsers className="w-4 h-4 text-[#00D9A5]" /> 推荐奖励
                 </span>
-                <span className="font-medium text-[#00D9A5]">{formatNumber(userInfo?.referralRewards, 4)} RWT</span>
+                <span className="font-medium text-[#00D9A5]">{formatNumber(userInfo?.referralRewards, 4)} AGG</span>
               </div>
               <div className="flex justify-between items-center p-4 rounded-xl bg-white/5 border border-white/5">
                 <span className="text-white/50">团队奖励</span>
-                <span className="font-medium text-[#FFB800]">{formatNumber(userInfo?.teamRewards, 4)} RWT</span>
+                <span className="font-medium text-[#FFB800]">{formatNumber(userInfo?.teamRewards, 4)} AGG</span>
               </div>
             </div>
           </div>
@@ -577,7 +577,7 @@ export default function LPMiningPage({
               <h4 className="font-semibold text-white">当前合约配置</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {[
-                  { label: '总奖励', value: `${formatNumber(contractConfig?.totalRewards)} RWT` },
+                  { label: '总奖励', value: `${formatNumber(contractConfig?.totalRewards)} AGG` },
                   { label: '挖矿周期', value: `${(contractConfig?.miningDurationDays / 365).toFixed(1)} 年` },
                   { label: '锁仓天数', value: `${contractConfig?.lockDurationDays || 30} 天` },
                 ].map((item) => (

@@ -268,10 +268,10 @@ export default function TokenMiningPage({
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: '总质押量', value: miningStatus?.totalStaked, suffix: 'RWT', icon: <FiLayers className="w-5 h-5" />, color: 'primary' },
-          { label: '已分发奖励', value: miningStatus?.totalDistributed, suffix: 'RWT', icon: <FiGift className="w-5 h-5" />, color: 'gold' },
-          { label: '剩余奖励', value: miningStatus?.remainingRewards, suffix: 'RWT', icon: <FiZap className="w-5 h-5" />, color: 'primary' },
-          { label: '我的待领取', value: pendingRewardAll, suffix: 'RWT', icon: <FiTrendingUp className="w-5 h-5" />, color: 'gold' },
+          { label: '总质押量', value: miningStatus?.totalStaked, suffix: 'AGG', icon: <FiLayers className="w-5 h-5" />, color: 'primary' },
+          { label: '已分发奖励', value: miningStatus?.totalDistributed, suffix: 'AGG', icon: <FiGift className="w-5 h-5" />, color: 'gold' },
+          { label: '剩余奖励', value: miningStatus?.remainingRewards, suffix: 'AGG', icon: <FiZap className="w-5 h-5" />, color: 'primary' },
+          { label: '我的待领取', value: pendingRewardAll, suffix: 'AGG', icon: <FiTrendingUp className="w-5 h-5" />, color: 'gold' },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -309,7 +309,7 @@ export default function TokenMiningPage({
         </div>
         <div className="flex justify-between text-xs text-white/40 mt-2">
           <span>0</span>
-          <span>3000 万 RWT</span>
+          <span>3000 万 AGG</span>
         </div>
       </div>
 
@@ -352,7 +352,7 @@ export default function TokenMiningPage({
             {/* Balance */}
             <div className="flex justify-between text-sm mb-3">
               <span className="text-white/50">可用余额</span>
-              <span className="font-medium text-white">{formatNumber(tokenBalance, 4)} RWT</span>
+              <span className="font-medium text-white">{formatNumber(tokenBalance, 4)} AGG</span>
             </div>
 
             {/* Input */}
@@ -379,13 +379,13 @@ export default function TokenMiningPage({
                 <div className="flex justify-between mb-2">
                   <span className="text-white/50">预计每日收益</span>
                   <span className="font-medium" style={{ color: currentTier.color }}>
-                    +{(parseFloat(depositAmount) * currentTier.rate / 100).toFixed(4)} RWT
+                    +{(parseFloat(depositAmount) * currentTier.rate / 100).toFixed(4)} AGG
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/50">预计月收益</span>
                   <span className="text-white/70">
-                    +{(parseFloat(depositAmount) * currentTier.rate / 100 * 30).toFixed(2)} RWT
+                    +{(parseFloat(depositAmount) * currentTier.rate / 100 * 30).toFixed(2)} AGG
                   </span>
                 </div>
               </div>
@@ -405,7 +405,7 @@ export default function TokenMiningPage({
                 className="w-full btn-premium disabled:opacity-50"
                 style={{ background: `linear-gradient(135deg, ${currentTier.color}, ${currentTier.color}CC)` }}
               >
-                <span>{isApproving ? '授权中...' : '授权 RWT 代币'}</span>
+                <span>{isApproving ? '授权中...' : '授权 AGG 代币'}</span>
               </motion.button>
             ) : (
               <motion.button
@@ -443,7 +443,7 @@ export default function TokenMiningPage({
                 <div className="text-sm">
                   <p className="font-medium text-[#FFB800]">滑点提醒</p>
                   <p className="text-white/50 mt-1">
-                    RWT 代币在 DEX 卖出时有 <span className="text-[#FFB800] font-medium">2.8%</span> 滑点（买入 0%）。
+                    AGG 代币在 DEX 卖出时有 <span className="text-[#FFB800] font-medium">2.8%</span> 滑点（买入 0%）。
                     质押和领取收益不受滑点影响。
                   </p>
                 </div>
@@ -483,11 +483,11 @@ export default function TokenMiningPage({
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 rounded-xl bg-white/5 border border-white/5">
                 <div className="text-sm text-white/50 mb-1">总质押</div>
-                <div className="text-xl font-bold text-white">{formatNumber(userInfo?.totalStaked, 4)} RWT</div>
+                <div className="text-xl font-bold text-white">{formatNumber(userInfo?.totalStaked, 4)} AGG</div>
               </div>
               <div className="p-4 rounded-xl bg-white/5 border border-white/5">
                 <div className="text-sm text-white/50 mb-1">累计收益</div>
-                <div className="text-xl font-bold text-[#00D9A5]">{formatNumber(userInfo?.totalClaimed, 4)} RWT</div>
+                <div className="text-xl font-bold text-[#00D9A5]">{formatNumber(userInfo?.totalClaimed, 4)} AGG</div>
               </div>
             </div>
 
@@ -530,11 +530,11 @@ export default function TokenMiningPage({
                       <div className="grid grid-cols-2 gap-4 mb-3">
                         <div>
                           <div className="text-xs text-white/40 mb-1">质押数量</div>
-                          <div className="font-medium text-white">{formatNumber(stake.amount, 4)} RWT</div>
+                          <div className="font-medium text-white">{formatNumber(stake.amount, 4)} AGG</div>
                         </div>
                         <div>
                           <div className="text-xs text-white/40 mb-1">待领取收益</div>
-                          <div className="font-medium text-[#00D9A5]">+{formatNumber(stake.pendingReward, 4)} RWT</div>
+                          <div className="font-medium text-[#00D9A5]">+{formatNumber(stake.pendingReward, 4)} AGG</div>
                         </div>
                       </div>
 
@@ -612,7 +612,7 @@ export default function TokenMiningPage({
                 <tbody className="text-white">
                   {[1000, 10000, 100000, 1000000].map(amount => (
                     <tr key={amount} className="border-t border-white/5">
-                      <td className="py-3 text-white/70">{formatNumber(amount)} RWT</td>
+                      <td className="py-3 text-white/70">{formatNumber(amount)} AGG</td>
                       {TIER_CONFIG.map(tier => (
                         <td key={tier.id} className="text-center py-3">
                           <div style={{ color: tier.color }}>日 +{formatNumber(amount * tier.rate / 100)}</div>

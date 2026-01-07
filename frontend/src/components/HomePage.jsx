@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { FiTrendingUp, FiUsers, FiDollarSign, FiZap, FiArrowRight, FiAward, FiActivity, FiCheckCircle } from 'react-icons/fi';
-import { formatNumber, MINING_CONFIG } from '../utils/constants';
+import { formatNumber } from '../utils/constants';
 
 export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data }) {
   const stats = [
@@ -14,14 +14,14 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
     {
       label: '代币矿池质押',
       value: tokenMiningV2Data?.miningStatus?.totalStaked || '0',
-      suffix: 'RWT',
+      suffix: 'AGG',
       icon: <FiDollarSign className="w-5 h-5" />,
       color: 'gold',
     },
     {
       label: 'LP 已分发奖励',
       value: lpMiningData?.miningStatus?.totalDistributed || '0',
-      suffix: 'RWT',
+      suffix: 'AGG',
       icon: <FiZap className="w-5 h-5" />,
       color: 'primary',
     },
@@ -38,9 +38,9 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
     {
       icon: <FiTrendingUp className="w-7 h-7" />,
       title: 'LP 质押挖矿',
-      subtitle: '60% 代币分配',
+      subtitle: '70% 代币分配',
       description: '质押 LP 代币参与挖矿，享受 65% 收益直接到账，3年线性释放',
-      stats: '6000万 RWT',
+      stats: '7000万 AGG',
       color: 'from-[#00D9A5] to-[#00B88A]',
       page: 'lp-mining',
     },
@@ -49,7 +49,7 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
       title: '代币质押挖矿 V2',
       subtitle: '30% 代币分配',
       description: '多档锁仓，收益更高！灵活质押146% APY，12个月锁仓365% APY',
-      stats: '3000万 RWT',
+      stats: '3000万 AGG',
       color: 'from-[#FFB800] to-[#FF8A00]',
       page: 'token-mining',
     },
@@ -115,7 +115,7 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
           <p className="text-xl md:text-2xl text-white/50 max-w-3xl mx-auto mb-10 leading-relaxed">
             LP 挖矿 + 代币挖矿 + 推荐奖励 + 团队奖励
             <br />
-            <span className="text-white/70">总计 9000 万代币奖励</span>
+            <span className="text-white/70">总计 1 亿 AGG 代币奖励</span>
           </p>
 
           {/* CTA Buttons */}
@@ -253,11 +253,10 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
             代币分配方案
           </h2>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 gap-8">
             {[
-              { percent: 60, label: 'LP 质押挖矿', amount: '6000 万', color: 'primary' },
+              { percent: 70, label: 'LP 质押挖矿', amount: '7000 万', color: 'primary' },
               { percent: 30, label: '代币质押挖矿', amount: '3000 万', color: 'gold' },
-              { percent: 10, label: '团队/流动性', amount: '1000 万', color: 'secondary' },
             ].map((item, index) => (
               <motion.div
                 key={item.label}
@@ -307,7 +306,7 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
                 </div>
 
                 <h3 className="text-lg font-semibold text-white mb-1">{item.label}</h3>
-                <p className="text-white/40 text-sm">{item.amount} RWT</p>
+                <p className="text-white/40 text-sm">{item.amount} AGG</p>
               </motion.div>
             ))}
           </div>

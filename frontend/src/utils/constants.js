@@ -1,14 +1,19 @@
-// BSC Testnet 合约地址 (2026-01-02 更新 - V2版本)
+// BSC 主网合约地址 (2026-01-07 部署)
 export const CONTRACTS = {
-  REWARD_TOKEN: '0x57E9cBF035776321F2A0d4AE74785FB56bD48e1B',
-  LP_TOKEN: '0xf7839D5B542b6d278d42f61eeB5ca61127C2e652',
-  LP_MINING: '0x7e9eDd989522F6f24dF47a6B9BFA9a04F9c6CE14',  // LPMiningV2 新版（含管理员转LP功能）
-  TOKEN_MINING: '0x01e2F695b7fF307A07bD20F29Bc08f565dF2199A',
-  // V2 合约
-  PROJECT_TOKEN_V2: '0xa3C9744b4a3C986E01d81009134589FF67748435',  // ProjectTokenV2 带滑点
-  TOKEN_MINING_V2: '0xC53B32D650ec48212b1a85c3FA8DB1505482A156',   // TokenMiningV2 多档锁仓版本
-  // 交易对
-  TOKEN_V2_PAIR: '0xEFfBc0c8b7aad81c34bD9D7e8C93015EB0c0a968',    // ProjectTokenV2/WBNB LP
+  // AGG 代币 (ProjectTokenV2)
+  REWARD_TOKEN: '0xCd339aec4797790A8e387eF10035df0000d3a815',
+  PROJECT_TOKEN_V2: '0xCd339aec4797790A8e387eF10035df0000d3a815',
+
+  // TokenMiningV2 (多档锁仓挖矿)
+  TOKEN_MINING_V2: '0xB4089956A0b775638e8F9F2E17deaE35B102c860',
+
+  // LP 相关 (创建流动性后填入)
+  LP_TOKEN: '',           // PancakeSwap LP Token 地址
+  LP_MINING: '',          // LPMiningV2 合约地址
+  TOKEN_V2_PAIR: '',      // AGG/WBNB 交易对地址
+
+  // 旧版合约 (不使用)
+  TOKEN_MINING: '',
 };
 
 // BSC 网络配置
@@ -52,13 +57,13 @@ export const NETWORKS = {
   },
 };
 
-// 当前使用的网络
-export const CURRENT_NETWORK = NETWORKS.BSC_TESTNET;
+// 当前使用的网络 - 主网
+export const CURRENT_NETWORK = NETWORKS.BSC_MAINNET;
 
 // 挖矿参数
 export const MINING_CONFIG = {
   LP_MINING: {
-    TOTAL_REWARDS: 60_000_000,
+    TOTAL_REWARDS: 70_000_000,
     DURATION_DAYS: 1095, // 3年
     USER_SHARE: 65, // 65%
     BONUS_SHARE: 35, // 35%
@@ -68,7 +73,7 @@ export const MINING_CONFIG = {
     DAILY_RATE: 0.5, // 0.5%
     APY: 182.5, // 0.5% * 365
   },
-  // V2 代币挖矿 - 随进随出 0.5%/天
+  // V2 代币挖矿 - 多档锁仓
   TOKEN_MINING_V2: {
     TOTAL_REWARDS: 30_000_000,
     DAILY_RATE: 0.5, // 0.5%

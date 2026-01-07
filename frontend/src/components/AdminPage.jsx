@@ -535,7 +535,7 @@ export default function AdminPage({
                   </div>
                   <div className="p-3 rounded-lg bg-white/5">
                     <div className="text-xs text-white/40 mb-1">总奖励</div>
-                    <div className="text-lg font-bold text-white">{formatNumber(contractConfig?.totalRewards)} RWT</div>
+                    <div className="text-lg font-bold text-white">{formatNumber(contractConfig?.totalRewards)} AGG</div>
                   </div>
                   <div className="p-3 rounded-lg bg-white/5">
                     <div className="text-xs text-white/40 mb-1">用户/分成</div>
@@ -583,7 +583,7 @@ export default function AdminPage({
               <div className="grid md:grid-cols-2 gap-3 mb-3">
                 <input
                   type="number"
-                  placeholder="总奖励 (RWT)"
+                  placeholder="总奖励 (AGG)"
                   value={lpConfig.totalRewards}
                   onChange={(e) => setLpConfig(prev => ({ ...prev, totalRewards: e.target.value }))}
                   className="input-premium"
@@ -824,15 +824,15 @@ export default function AdminPage({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div className="p-3 rounded-lg bg-white/5">
                     <div className="text-xs text-white/40 mb-1">总质押</div>
-                    <div className="text-lg font-bold text-white">{formatNumber(tokenV2Status?.totalStaked)} RWT</div>
+                    <div className="text-lg font-bold text-white">{formatNumber(tokenV2Status?.totalStaked)} AGG</div>
                   </div>
                   <div className="p-3 rounded-lg bg-white/5">
                     <div className="text-xs text-white/40 mb-1">已分发</div>
-                    <div className="text-lg font-bold text-white">{formatNumber(tokenV2Status?.totalDistributed)} RWT</div>
+                    <div className="text-lg font-bold text-white">{formatNumber(tokenV2Status?.totalDistributed)} AGG</div>
                   </div>
                   <div className="p-3 rounded-lg bg-white/5">
                     <div className="text-xs text-white/40 mb-1">剩余奖励</div>
-                    <div className="text-lg font-bold text-white">{formatNumber(tokenV2Status?.remainingRewards)} RWT</div>
+                    <div className="text-lg font-bold text-white">{formatNumber(tokenV2Status?.remainingRewards)} AGG</div>
                   </div>
                   <div className="p-3 rounded-lg bg-white/5">
                     <div className="text-xs text-white/40 mb-1">状态</div>
@@ -863,7 +863,7 @@ export default function AdminPage({
               <div className="flex gap-3">
                 <input
                   type="number"
-                  placeholder="总奖励数量 (RWT)"
+                  placeholder="总奖励数量 (AGG)"
                   value={tokenV2Config.totalRewards}
                   onChange={(e) => setTokenV2Config(prev => ({ ...prev, totalRewards: e.target.value }))}
                   className="input-premium flex-1"
