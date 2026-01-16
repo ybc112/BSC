@@ -32,15 +32,26 @@ export function useContracts(signer, provider) {
 
     const signerOrProvider = signer || provider;
 
-    const lpMining = new ethers.Contract(CONTRACTS.LP_MINING, LP_MINING_ABI, signerOrProvider);
-    const tokenMining = new ethers.Contract(CONTRACTS.TOKEN_MINING, TOKEN_MINING_ABI, signerOrProvider);
-    const rewardToken = new ethers.Contract(CONTRACTS.REWARD_TOKEN, ERC20_ABI, signerOrProvider);
-    const lpToken = new ethers.Contract(CONTRACTS.LP_TOKEN, ERC20_ABI, signerOrProvider);
-
-    // V2 合约
+    // 只有地址不为空时才创建合约实例
+    let lpMining = null;
+    let tokenMining = null;
+    let rewardToken = null;
+    let lpToken = null;
     let tokenMiningV2 = null;
     let projectTokenV2 = null;
 
+    if (CONTRACTS.LP_MINING) {
+      lpMining = new ethers.Contract(CONTRACTS.LP_MINING, LP_MINING_ABI, signerOrProvider);
+    }
+    if (CONTRACTS.TOKEN_MINING) {
+      tokenMining = new ethers.Contract(CONTRACTS.TOKEN_MINING, TOKEN_MINING_ABI, signerOrProvider);
+    }
+    if (CONTRACTS.REWARD_TOKEN) {
+      rewardToken = new ethers.Contract(CONTRACTS.REWARD_TOKEN, ERC20_ABI, signerOrProvider);
+    }
+    if (CONTRACTS.LP_TOKEN) {
+      lpToken = new ethers.Contract(CONTRACTS.LP_TOKEN, ERC20_ABI, signerOrProvider);
+    }
     if (CONTRACTS.TOKEN_MINING_V2) {
       tokenMiningV2 = new ethers.Contract(CONTRACTS.TOKEN_MINING_V2, TOKEN_MINING_V2_ABI, signerOrProvider);
     }
@@ -69,7 +80,11 @@ export function useLPMining(contract, account) {
   });
 
   const fetchData = useCallback(async () => {
-    if (!contract) return;
+    // 如果合约不存在，直接返回空数据
+    if (!contract) {
+      setData(prev => ({ ...prev, loading: false }));
+      return;
+    }
 
     try {
       const miningStatus = await retryCall(() => contract.getMiningStatus());
@@ -386,6 +401,7 @@ export function useTokenBalance(tokenContract, account) {
   const [loading, setLoading] = useState(true);
 
   const fetchBalance = useCallback(async () => {
+    // 如果合约或账户不存在，直接返回 0
     if (!tokenContract || !account) {
       setBalance('0');
       setLoading(false);
@@ -397,6 +413,7 @@ export function useTokenBalance(tokenContract, account) {
       setBalance(ethers.formatEther(bal));
     } catch (err) {
       console.error('Fetch balance error:', err);
+      setBalance('0');
     } finally {
       setLoading(false);
     }

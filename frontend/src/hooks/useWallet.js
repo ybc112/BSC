@@ -1,14 +1,29 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { CURRENT_NETWORK } from '../utils/constants';
+
+// 创建默认的只读 Provider（用于未连接钱包时读取链上数据）
+const createDefaultProvider = () => {
+  // 使用多个 RPC 节点，提高可靠性
+  const rpcUrls = CURRENT_NETWORK.rpcUrls;
+  // 随机选择一个 RPC 节点，避免单点故障
+  const randomRpc = rpcUrls[Math.floor(Math.random() * rpcUrls.length)];
+  return new ethers.JsonRpcProvider(randomRpc);
+};
 
 export function useWallet() {
   const [account, setAccount] = useState(null);
   const [chainId, setChainId] = useState(null);
-  const [provider, setProvider] = useState(null);
+  const [walletProvider, setWalletProvider] = useState(null);
   const [signer, setSigner] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState(null);
+
+  // 默认只读 Provider（始终可用）
+  const defaultProvider = useMemo(() => createDefaultProvider(), []);
+
+  // 优先使用钱包 Provider，否则使用默认 Provider
+  const provider = walletProvider || defaultProvider;
 
   const isCorrectNetwork = chainId === parseInt(CURRENT_NETWORK.chainId, 16);
 
@@ -19,14 +34,14 @@ export function useWallet() {
     try {
       const accounts = await window.ethereum.request({ method: 'eth_accounts' });
       if (accounts.length > 0) {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const network = await provider.getNetwork();
+        const browserProvider = new ethers.BrowserProvider(window.ethereum);
+        const walletSigner = await browserProvider.getSigner();
+        const network = await browserProvider.getNetwork();
 
         setAccount(accounts[0]);
         setChainId(Number(network.chainId));
-        setProvider(provider);
-        setSigner(signer);
+        setWalletProvider(browserProvider);
+        setSigner(walletSigner);
       }
     } catch (err) {
       console.error('Check connection error:', err);
@@ -48,14 +63,14 @@ export function useWallet() {
         method: 'eth_requestAccounts',
       });
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const network = await provider.getNetwork();
+      const browserProvider = new ethers.BrowserProvider(window.ethereum);
+      const walletSigner = await browserProvider.getSigner();
+      const network = await browserProvider.getNetwork();
 
       setAccount(accounts[0]);
       setChainId(Number(network.chainId));
-      setProvider(provider);
-      setSigner(signer);
+      setWalletProvider(browserProvider);
+      setSigner(walletSigner);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -67,7 +82,7 @@ export function useWallet() {
   const disconnect = useCallback(() => {
     setAccount(null);
     setChainId(null);
-    setProvider(null);
+    setWalletProvider(null);
     setSigner(null);
   }, []);
 

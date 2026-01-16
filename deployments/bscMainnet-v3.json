@@ -1,0 +1,10 @@
+{
+  "network": "bscMainnet",
+  "deployedAt": "2026-01-13T11:02:35.195Z",
+  "contracts": {
+    "AGG_TOKEN": "0xCd339aec4797790A8e387eF10035df0000d3a815",
+    "TokenMiningV3": "0x982D6E5a70034d34837BF7c5DACCee8D188c6913"
+  },
+  "owner": "0x4277EF1F274D6146229D2501F2e2A6ecc26f2789",
+  "startTime": 1768302207
+}
