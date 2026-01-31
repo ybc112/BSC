@@ -59,16 +59,20 @@ function App() {
   // 检查是否是管理员
   useEffect(() => {
     const checkAdmin = async () => {
-      if (!account || !contracts.lpMining) {
+      if (!account) {
+        setIsAdmin(false);
+        return;
+      }
+      // 只要有任意一个合约实例就进行检查
+      const contractList = [contracts.lpMining, contracts.tokenMiningV2, contracts.projectTokenV2];
+      if (!contractList.some(c => c)) {
         setIsAdmin(false);
         return;
       }
       try {
-        const owners = await Promise.all([
-          contracts.lpMining?.owner().catch(() => null),
-          contracts.tokenMiningV2?.owner().catch(() => null),
-          contracts.projectTokenV2?.owner().catch(() => null),
-        ]);
+        const owners = await Promise.all(
+          contractList.map(c => c?.owner().catch(() => null) ?? Promise.resolve(null))
+        );
         const isOwner = owners.some(
           owner => owner && owner.toLowerCase() === account.toLowerCase()
         );
