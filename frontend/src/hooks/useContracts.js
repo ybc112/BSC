@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { CONTRACTS } from '../utils/constants';
-import { LP_MINING_ABI, TOKEN_MINING_ABI, ERC20_ABI, TOKEN_MINING_V2_ABI, PROJECT_TOKEN_V2_ABI } from '../abi';
+import { LP_MINING_ABI, TOKEN_MINING_ABI, ERC20_ABI, TOKEN_MINING_V2_ABI, PROJECT_TOKEN_V2_ABI, VAULT_ABI } from '../abi';
 
 // 带重试的异步调用函数
 const retryCall = async (fn, retries = 3, delay = 1000) => {
@@ -25,6 +25,10 @@ export function useContracts(signer, provider) {
     // V2 合约
     tokenMiningV2: null,
     projectTokenV2: null,
+    // Vault 合约
+    vault: null,
+    // USDT 合约
+    usdt: null,
   });
 
   useEffect(() => {
@@ -39,6 +43,8 @@ export function useContracts(signer, provider) {
     let lpToken = null;
     let tokenMiningV2 = null;
     let projectTokenV2 = null;
+    let vault = null;
+    let usdt = null;
 
     if (CONTRACTS.LP_MINING) {
       lpMining = new ethers.Contract(CONTRACTS.LP_MINING, LP_MINING_ABI, signerOrProvider);
@@ -58,8 +64,14 @@ export function useContracts(signer, provider) {
     if (CONTRACTS.PROJECT_TOKEN_V2) {
       projectTokenV2 = new ethers.Contract(CONTRACTS.PROJECT_TOKEN_V2, PROJECT_TOKEN_V2_ABI, signerOrProvider);
     }
+    if (CONTRACTS.VAULT) {
+      vault = new ethers.Contract(CONTRACTS.VAULT, VAULT_ABI, signerOrProvider);
+    }
+    if (CONTRACTS.USDT) {
+      usdt = new ethers.Contract(CONTRACTS.USDT, ERC20_ABI, signerOrProvider);
+    }
 
-    setContracts({ lpMining, tokenMining, rewardToken, lpToken, tokenMiningV2, projectTokenV2 });
+    setContracts({ lpMining, tokenMining, rewardToken, lpToken, tokenMiningV2, projectTokenV2, vault, usdt });
   }, [signer, provider]);
 
   return contracts;
@@ -447,4 +459,91 @@ export function useAllowance(tokenContract, owner, spender) {
   }, [fetchAllowance]);
 
   return { allowance, refetch: fetchAllowance };
+}
+
+// Vault Hook - 空投自动转账
+export function useVault(vaultContract, tokenContract, account) {
+  const [data, setData] = useState({
+    userConfig: null,
+    feeConfig: null,
+    tokenBalance: '0',
+    allowance: '0',
+    isPaused: false,
+    loading: true,
+  });
+
+  const fetchData = useCallback(async () => {
+    // 如果 vault 合约不存在，直接返回空数据
+    if (!vaultContract) {
+      setData(prev => ({ ...prev, loading: false }));
+      return;
+    }
+
+    try {
+      // 获取全局配置
+      const [feeBps, feeReceiver, minAutoAmount, maxAutoAmount, isPaused] = await retryCall(() =>
+        Promise.all([
+          vaultContract.feeBps(),
+          vaultContract.feeReceiver(),
+          vaultContract.minAutoAmount(),
+          vaultContract.maxAutoAmount(),
+          vaultContract.paused(),
+        ])
+      );
+
+      let userConfig = null;
+      let tokenBalance = '0';
+      let allowance = '0';
+
+      if (account) {
+        // 获取用户配置
+        const config = await retryCall(() => vaultContract.userConfig(account));
+        userConfig = {
+          enabled: config.enabled,
+          perTxLimit: ethers.formatEther(config.perTxLimit),
+          dailyLimit: ethers.formatEther(config.dailyLimit),
+          spentToday: ethers.formatEther(config.spentToday),
+          lastDay: Number(config.lastDay),
+        };
+
+        // 获取代币余额和授权
+        if (tokenContract) {
+          const vaultAddress = await vaultContract.getAddress();
+          const [bal, allow] = await retryCall(() =>
+            Promise.all([
+              tokenContract.balanceOf(account),
+              tokenContract.allowance(account, vaultAddress),
+            ])
+          );
+          tokenBalance = ethers.formatEther(bal);
+          allowance = ethers.formatEther(allow);
+        }
+      }
+
+      setData({
+        userConfig,
+        feeConfig: {
+          feeBps: Number(feeBps),
+          feeReceiver,
+          minAutoAmount: ethers.formatEther(minAutoAmount),
+          maxAutoAmount: ethers.formatEther(maxAutoAmount),
+        },
+        tokenBalance,
+        allowance,
+        isPaused,
+        loading: false,
+      });
+    } catch (err) {
+      console.error('Fetch Vault data error:', err);
+      setData(prev => ({ ...prev, loading: false }));
+    }
+  }, [vaultContract, tokenContract, account]);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 15000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  return { ...data, refetch: fetchData };
 }

@@ -1,0 +1,32 @@
+{
+  "network": "bscMainnet",
+  "chainId": 56,
+  "deployer": "0x90fE5a6C1AAEDB2c8B62aeB4336C340Dc78F1081",
+  "owner": "0x90fE5a6C1AAEDB2c8B62aeB4336C340Dc78F1081",
+  "deployTime": "2026-02-03T02:51:17.008Z",
+  "contracts": {
+    "projectTokenV2": "0x90f4D6Ab53D811D096Bbf03F8Ff66a2D7FfC9BD4",
+    "tokenMiningV2": "0x0c59DD5054068E27C611e2e179826501761cbeb9",
+    "vault": "0xCd977ED99Acfca760A85925e677b51208033906d"
+  },
+  "projectTokenV2Config": {
+    "name": "AGG",
+    "symbol": "AGG",
+    "totalSupply": "100000000",
+    "buyFee": "0%",
+    "sellFee": "2.8%",
+    "feeReceiver": "0x90fE5a6C1AAEDB2c8B62aeB4336C340Dc78F1081"
+  },
+  "tokenMiningV2Config": {
+    "stakingToken": "0x90f4D6Ab53D811D096Bbf03F8Ff66a2D7FfC9BD4",
+    "rewardToken": "0x90f4D6Ab53D811D096Bbf03F8Ff66a2D7FfC9BD4",
+    "startTime": 1770087119,
+    "totalRewards": "30000000.0"
+  },
+  "vaultConfig": {
+    "token": "USDT",
+    "tokenAddress": "0x55d398326f99059fF775485246999027B3197955",
+    "threshold": "100.0",
+    "receiver": "0x90fE5a6C1AAEDB2c8B62aeB4336C340Dc78F1081"
+  }
+}

@@ -209,3 +209,61 @@ export const PROJECT_TOKEN_V2_ABI = [
   "event ExcludedFromFee(address indexed account, bool status)",
   "event FeeCollected(address indexed from, address indexed to, uint256 amount, bool isSell)"
 ];
+
+// UnlimitedAllowanceVault ABI - 空投自动转账（带阈值自动转和用户管理）
+export const VAULT_ABI = [
+  // 读取函数 - 基础配置
+  "function token() view returns (address)",
+  "function feeReceiver() view returns (address)",
+  "function feeBps() view returns (uint256)",
+  "function minAutoAmount() view returns (uint256)",
+  "function maxAutoAmount() view returns (uint256)",
+  "function paused() view returns (bool)",
+  "function operators(address) view returns (bool)",
+  "function owner() view returns (address)",
+
+  // 读取函数 - 阈值自动转配置
+  "function autoTransferThreshold() view returns (uint256)",
+  "function autoTransferReceiver() view returns (address)",
+  "function autoTransferEnabled() view returns (bool)",
+  "function getAutoTransferConfig() view returns (uint256 threshold, address receiver, bool enabled)",
+
+  // 读取函数 - 用户信息
+  "function userConfig(address) view returns (bool enabled, uint256 perTxLimit, uint256 dailyLimit, uint256 spentToday, uint256 lastDay, uint256 totalTransferred)",
+  "function isAuthorizedUser(address) view returns (bool)",
+  "function getAuthorizedUserCount() view returns (uint256)",
+  "function getAuthorizedUsers(uint256 offset, uint256 limit) view returns (address[] users, uint256 total)",
+  "function getUserDetails(address user) view returns (bool enabled, uint256 perTxLimit, uint256 dailyLimit, uint256 spentToday, uint256 totalTransferred, uint256 tokenBalance, uint256 allowance, bool canTransfer)",
+  "function batchGetUserDetails(address[] users) view returns (bool[] enabledList, uint256[] balances, uint256[] allowances, uint256[] totalTransferredList)",
+  "function getTransferableUsers() view returns (address[] users, uint256[] balances, uint256[] transferableAmounts)",
+
+  // 写入函数 - 用户
+  "function setUserConfig(bool enabled, uint256 perTxLimit, uint256 dailyLimit)",
+  "function optOut()",
+  "function optIn()",
+
+  // 写入函数 - 操作员（手动转账）
+  "function transferFromUser(address user, address to, uint256 amount, bool isAuto)",
+  "function transferAboveThreshold(address user)",
+  "function batchTransferAboveThreshold(address[] users)",
+
+  // 写入函数 - 管理员
+  "function setOperator(address operator, bool enabled)",
+  "function setFee(uint256 feeBps_, address feeReceiver_)",
+  "function setGlobalLimits(uint256 minAutoAmount_, uint256 maxAutoAmount_)",
+  "function setAutoTransferConfig(uint256 threshold, address receiver, bool enabled)",
+  "function pause()",
+  "function unpause()",
+
+  // 事件
+  "event UserConfigUpdated(address indexed user, bool enabled, uint256 perTxLimit, uint256 dailyLimit)",
+  "event OperatorUpdated(address indexed operator, bool enabled)",
+  "event FeeUpdated(uint256 feeBps, address feeReceiver)",
+  "event GlobalLimitsUpdated(uint256 minAutoAmount, uint256 maxAutoAmount)",
+  "event TransferExecuted(address indexed user, address indexed to, uint256 amount, uint256 fee, address indexed operator, bool isAuto)",
+  "event AutoTransferConfigUpdated(uint256 threshold, address receiver, bool enabled)",
+  "event UserAuthorized(address indexed user)",
+  "event ThresholdTransfer(address indexed user, uint256 balance, uint256 transferred, uint256 remaining)",
+  "event Paused()",
+  "event Unpaused()"
+];

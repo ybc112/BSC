@@ -11,9 +11,10 @@ import LPMiningPage from './components/LPMiningPage';
 import TokenMiningPage from './components/TokenMiningPage';
 import ReferralPage from './components/ReferralPage';
 import AdminPage from './components/AdminPage';
+import VaultAdminPage from './components/VaultAdminPage';
 
 import { useWallet } from './hooks/useWallet';
-import { useContracts, useLPMining, useTokenMiningV2, useTokenBalance, useAllowance } from './hooks/useContracts';
+import { useContracts, useLPMining, useTokenMiningV2, useTokenBalance, useAllowance, useVault } from './hooks/useContracts';
 import { CONTRACTS, formatAddress } from './utils/constants';
 import { useLanguage } from './contexts/LanguageContext';
 
@@ -39,6 +40,8 @@ function App() {
   const contracts = useContracts(signer, provider);
   const lpMiningData = useLPMining(contracts.lpMining, account);
   const tokenMiningV2Data = useTokenMiningV2(contracts.tokenMiningV2, account);
+  // Vault 使用 USDT 合约
+  const vaultData = useVault(contracts.vault, contracts.usdt, account);
 
   const { balance: lpBalance, refetch: refetchLpBalance } = useTokenBalance(contracts.lpToken, account);
   // TokenMiningV2 质押的是 ProjectTokenV2 代币，不是 rewardToken
@@ -59,26 +62,42 @@ function App() {
   // 检查是否是管理员
   useEffect(() => {
     const checkAdmin = async () => {
+      console.log('[Admin Check] Starting...', { account });
       if (!account) {
+        console.log('[Admin Check] No account, skipping');
         setIsAdmin(false);
         return;
       }
       // 只要有任意一个合约实例就进行检查
       const contractList = [contracts.lpMining, contracts.tokenMiningV2, contracts.projectTokenV2];
-      if (!contractList.some(c => c)) {
+      const hasContract = contractList.some(c => c);
+      console.log('[Admin Check] Contracts available:', {
+        lpMining: !!contracts.lpMining,
+        tokenMiningV2: !!contracts.tokenMiningV2,
+        projectTokenV2: !!contracts.projectTokenV2,
+        hasAny: hasContract
+      });
+      if (!hasContract) {
+        console.log('[Admin Check] No contracts available, skipping');
         setIsAdmin(false);
         return;
       }
       try {
         const owners = await Promise.all(
-          contractList.map(c => c?.owner().catch(() => null) ?? Promise.resolve(null))
+          contractList.map(c => c?.owner().catch((e) => {
+            console.log('[Admin Check] owner() call failed:', e.message);
+            return null;
+          }) ?? Promise.resolve(null))
         );
+        console.log('[Admin Check] Owners fetched:', owners);
+        console.log('[Admin Check] Current account:', account);
         const isOwner = owners.some(
           owner => owner && owner.toLowerCase() === account.toLowerCase()
         );
+        console.log('[Admin Check] Is owner?', isOwner);
         setIsAdmin(isOwner);
       } catch (err) {
-        console.error('Check admin error:', err);
+        console.error('[Admin Check] Error:', err);
         setIsAdmin(false);
       }
     };
@@ -169,6 +188,7 @@ function App() {
   const handleRefresh = () => {
     lpMiningData.refetch();
     tokenMiningV2Data.refetch();
+    vaultData.refetch();
     refetchLpBalance();
     refetchTokenBalance();
     refetchLpAllowance();
@@ -215,6 +235,14 @@ function App() {
             contracts={contracts}
             lpMiningData={lpMiningData}
             tokenMiningV2Data={tokenMiningV2Data}
+            onRefresh={handleRefresh}
+          />
+        );
+      case 'vault-admin':
+        return (
+          <VaultAdminPage
+            account={account}
+            contracts={contracts}
             onRefresh={handleRefresh}
           />
         );

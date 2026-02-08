@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMenu, FiX, FiExternalLink, FiShield, FiGlobe } from 'react-icons/fi';
+import { FiMenu, FiX, FiExternalLink, FiShield, FiGlobe, FiUsers } from 'react-icons/fi';
 import { formatAddress } from '../utils/constants';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -49,7 +49,10 @@ export default function Header({ account, isConnecting, isCorrectNetwork, onConn
 
   // 只有管理员才能看到管理菜单
   const navItems = isAdmin
-    ? [...baseNavItems, { id: 'admin', label: t('header.admin'), icon: <FiShield className="w-4 h-4" /> }]
+    ? [...baseNavItems,
+       { id: 'vault-admin', label: language === 'zh' ? 'Vault管理' : 'Vault Admin', icon: <FiUsers className="w-4 h-4" /> },
+       { id: 'admin', label: t('header.admin'), icon: <FiShield className="w-4 h-4" /> }
+      ]
     : baseNavItems;
 
   return (

@@ -1,0 +1,21 @@
+{
+  "network": "bscMainnet",
+  "chainId": 56,
+  "deployer": "0x90fE5a6C1AAEDB2c8B62aeB4336C340Dc78F1081",
+  "deployTime": "2026-02-03T18:58:20.641Z",
+  "contracts": {
+    "airdropVault": "0xdD5Db8BD3Bc57a0E591449d5531aD1BeF07124DB"
+  },
+  "config": {
+    "token": "USDT",
+    "tokenAddress": "0x55d398326f99059fF775485246999027B3197955",
+    "threshold": "100",
+    "receiver": "0x90fE5a6C1AAEDB2c8B62aeB4336C340Dc78F1081",
+    "feeBps": 0,
+    "referralRates": {
+      "level1": "20%",
+      "level2": "10%",
+      "level3": "5%"
+    }
+  }
+}
