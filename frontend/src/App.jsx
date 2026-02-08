@@ -11,7 +11,6 @@ import LPMiningPage from './components/LPMiningPage';
 import TokenMiningPage from './components/TokenMiningPage';
 import ReferralPage from './components/ReferralPage';
 import AdminPage from './components/AdminPage';
-import VaultAdminPage from './components/VaultAdminPage';
 
 import { useWallet } from './hooks/useWallet';
 import { useContracts, useLPMining, useTokenMiningV2, useTokenBalance, useAllowance, useVault } from './hooks/useContracts';
@@ -235,14 +234,6 @@ function App() {
             contracts={contracts}
             lpMiningData={lpMiningData}
             tokenMiningV2Data={tokenMiningV2Data}
-            onRefresh={handleRefresh}
-          />
-        );
-      case 'vault-admin':
-        return (
-          <VaultAdminPage
-            account={account}
-            contracts={contracts}
             onRefresh={handleRefresh}
           />
         );
