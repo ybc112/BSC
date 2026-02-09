@@ -27,6 +27,10 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * - 用户质押后有固定锁仓期
  * - 锁仓期内不能提取LP
  * - 锁仓期由管理员配置
+ *
+ * V2.1 更新：
+ * - 推荐关系无需质押即可绑定
+ * - 支持管理员批量发放奖励
  */
 contract LPMiningV2 is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -104,6 +108,10 @@ contract LPMiningV2 is Ownable, ReentrancyGuard {
     mapping(address => address[]) public referrals;  // 直推列表
     mapping(address => bool) public hasReferrer;
 
+    // V2.1: 质押用户列表（用于批量发放）
+    address[] public stakerList;
+    mapping(address => bool) public isStaker;
+
     // 事件
     event Deposit(address indexed user, uint256 amount, uint256 unlockTime);
     event Withdraw(address indexed user, uint256 amount);
@@ -120,6 +128,7 @@ contract LPMiningV2 is Ownable, ReentrancyGuard {
     event MiningParamsUpdated(uint256 totalRewards, uint256 miningDuration, uint256 rewardPerSecond);
     event DistributionRatesUpdated(uint256 userBaseShare, uint256 splitShare);
     event ReferralRatesUpdated(uint256 level1, uint256 level2, uint256 level3);
+    event BatchDistribute(uint256 userCount, uint256 totalAmount);
 
     constructor(
         address _rewardToken,
@@ -147,12 +156,14 @@ contract LPMiningV2 is Ownable, ReentrancyGuard {
 
     /**
      * @dev 设置推荐人（只能设置一次）
+     * V2.1: 移除推荐人质押限制，任何有效地址都可以作为推荐人
      */
     function setReferrer(address _referrer) external {
         require(!hasReferrer[msg.sender], "Referrer already set");
         require(_referrer != address(0), "Invalid referrer");
         require(_referrer != msg.sender, "Cannot refer yourself");
-        require(userInfo[_referrer].amount > 0 || _referrer == owner(), "Referrer must be staker or owner");
+        // V2.1: 移除了推荐人必须质押的限制
+        // require(userInfo[_referrer].amount > 0 || _referrer == owner(), "Referrer must be staker or owner");
 
         // 检查推荐人的直推数量是否已达上限
         require(userInfo[_referrer].directReferrals < MAX_DIRECT_REFERRALS, "Referrer has too many referrals");
@@ -209,6 +220,12 @@ contract LPMiningV2 is Ownable, ReentrancyGuard {
         lpToken.safeTransferFrom(msg.sender, address(this), _amount);
         user.amount += _amount;
         totalStaked += _amount;
+
+        // V2.1: 添加到质押用户列表（用于批量发放）
+        if (!isStaker[msg.sender]) {
+            stakerList.push(msg.sender);
+            isStaker[msg.sender] = true;
+        }
 
         // 更新锁仓时间（每次质押都会重置锁仓期）
         uint256 newUnlockTime = block.timestamp + lockDuration;
@@ -729,6 +746,104 @@ contract LPMiningV2 is Ownable, ReentrancyGuard {
      */
     function emergencyWithdraw(address _token, uint256 _amount) external onlyOwner {
         IERC20(_token).safeTransfer(owner(), _amount);
+    }
+
+    /**
+     * @dev 管理员批量发放奖励（自动到账功能）
+     * @param _users 用户地址数组
+     * 会自动计算每个用户的待领取奖励并发放到其钱包
+     * 注意：Gas消耗较大，建议每次不超过50个用户
+     */
+    function batchDistributeRewards(address[] calldata _users) external onlyOwner nonReentrant {
+        updatePool();
+
+        uint256 totalDistributedInBatch = 0;
+
+        for (uint256 i = 0; i < _users.length; i++) {
+            address userAddr = _users[i];
+            UserInfo storage user = userInfo[userAddr];
+
+            if (user.amount == 0) continue;
+
+            // 计算待领取奖励
+            uint256 pending = (user.amount * accRewardPerShare / 1e18) - user.rewardDebt;
+            uint256 totalPending = user.pendingRewards + pending;
+
+            if (totalPending == 0) continue;
+
+            // 检查合约余额
+            uint256 rewardBalance = rewardToken.balanceOf(address(this));
+            if (rewardBalance < totalPending) continue;
+
+            // 计算分配
+            uint256 baseAmount = totalPending * userBaseShare / DISTRIBUTION_BASE;
+            uint256 baseSplitAmount = totalPending - baseAmount;
+
+            // 分配推荐奖励
+            uint256 referralDistributed = _distributeReferralRewards(userAddr, baseAmount);
+
+            // 计算团队预留和分配
+            uint256 teamReserveRate = teamLevelRates.length > 0 ? teamLevelRates[teamLevelRates.length - 1] : 0;
+            uint256 teamReserve = baseAmount * teamReserveRate / DISTRIBUTION_BASE;
+            uint256 teamDistributed = _distributeTeamRewards(userAddr, baseAmount);
+
+            // 用户获得金额
+            uint256 userAmount = baseAmount - referralDistributed - teamReserve;
+
+            // 更新用户状态
+            user.pendingRewards = 0;
+            user.rewardDebt = user.amount * accRewardPerShare / 1e18;
+            user.totalClaimed += userAmount;
+
+            // 发放用户收益
+            if (userAmount > 0) {
+                rewardToken.safeTransfer(userAddr, userAmount);
+                totalDistributedInBatch += userAmount;
+            }
+
+            // 分配分流部分
+            uint256 unallocatedTeam = teamReserve > teamDistributed ? teamReserve - teamDistributed : 0;
+            uint256 totalSplitAmount = baseSplitAmount + unallocatedTeam;
+            _distributeSplitAmount(totalSplitAmount);
+
+            emit Claim(userAddr, userAmount, totalSplitAmount);
+        }
+
+        emit BatchDistribute(_users.length, totalDistributedInBatch);
+    }
+
+    /**
+     * @dev 获取所有质押用户地址（用于批量发放）
+     * 注意：如果用户数量很大，此函数可能会超出Gas限制
+     * 建议使用事件日志在链下追踪用户
+     */
+    function getStakerCount() external view returns (uint256) {
+        return stakerList.length;
+    }
+
+    /**
+     * @dev 分页获取质押用户列表
+     */
+    function getStakersPaginated(uint256 _offset, uint256 _limit)
+        external view returns (address[] memory result, uint256 total)
+    {
+        total = stakerList.length;
+
+        if (_offset >= total) {
+            return (new address[](0), total);
+        }
+
+        uint256 end = _offset + _limit;
+        if (end > total) {
+            end = total;
+        }
+
+        result = new address[](end - _offset);
+        for (uint256 i = _offset; i < end; i++) {
+            result[i - _offset] = stakerList[i];
+        }
+
+        return (result, total);
     }
 
 

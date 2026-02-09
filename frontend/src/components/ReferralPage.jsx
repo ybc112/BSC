@@ -362,16 +362,13 @@ export default function ReferralPage({
                 <p className="text-white/50 text-sm mb-4">
                   {t('referral.setReferrerDesc')}
                 </p>
-                {/* 推荐人要求提示 */}
-                <div className="p-3 rounded-xl bg-[#FFB800]/10 border border-[#FFB800]/20 mb-4">
+                {/* 推荐人提示 */}
+                <div className="p-3 rounded-xl bg-[#00D9A5]/10 border border-[#00D9A5]/20 mb-4">
                   <div className="flex items-start gap-2">
-                    <FiInfo className="w-4 h-4 text-[#FFB800] mt-0.5 flex-shrink-0" />
+                    <FiInfo className="w-4 h-4 text-[#00D9A5] mt-0.5 flex-shrink-0" />
                     <div className="text-sm text-white/70">
-                      <p className="font-medium text-[#FFB800] mb-1">{t('referral.referrerRequirement')}</p>
-                      <ul className="list-disc list-inside space-y-1 text-white/50">
-                        <li>{t('referral.referrerReq1')}</li>
-                        <li>{t('referral.referrerReq2')}</li>
-                      </ul>
+                      <p className="font-medium text-[#00D9A5] mb-1">{t('referral.referrerTip')}</p>
+                      <p className="text-white/50">{t('referral.referrerTipDesc')}</p>
                     </div>
                   </div>
                 </div>
