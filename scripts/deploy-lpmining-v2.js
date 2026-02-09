@@ -46,13 +46,8 @@ async function main() {
   } else if (network.chainId === 56n) {
     // BSC 主网
     console.log("使用 BSC 主网配置...");
-    rewardToken = "0x5d4613b686C087Cc97aa96a291bd86255F970999"; // AGG Token (主网)
-    lpToken = "0x..."; // LP Token (主网) - TODO: 需要填入实际LP地址
-
-    if (lpToken === "0x...") {
-      console.error("错误: 请先配置主网 LP Token 地址!");
-      process.exit(1);
-    }
+    rewardToken = "0xCd339aec4797790A8e387eF10035df0000d3a815"; // AGG Token (主网)
+    lpToken = "0x7552081681410f1828a02cfeb865ea444fb21909";     // LP Token (主网)
   } else {
     console.error("错误: 不支持的网络");
     process.exit(1);

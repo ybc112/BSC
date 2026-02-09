@@ -40,7 +40,7 @@ contract LPMiningV2 is Ownable, ReentrancyGuard {
     IERC20 public lpToken;
 
     // 挖矿参数（可配置）
-    uint256 public totalRewards = 60_000_000 * 1e18;  // 6000万代币，可配置
+    uint256 public totalRewards = 70_000_000 * 1e18;  // 7000万代币，可配置
     uint256 public miningDuration = 3 * 365 days;      // 3年，可配置
     uint256 public rewardPerSecond;                              // 每秒释放量
     uint256 public startTime;
