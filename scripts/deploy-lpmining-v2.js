@@ -10,7 +10,14 @@ const { ethers } = require("hardhat");
  * V2.1 更新内容:
  *   1. 推荐关系无需质押即可绑定
  *   2. 支持管理员批量发放奖励（每日自动到账功能）
+ *
+ * 部署流程:
+ *   1. 使用部署钱包部署合约
+ *   2. 自动将 Owner 权限转移给客户钱包
  */
+
+// ========== 客户钱包地址（最终 Owner）==========
+const CUSTOMER_WALLET = "0x4277EF1F274D6146229D2501F2e2A6ecc26f2789";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -21,6 +28,7 @@ async function main() {
   console.log("========================================");
   console.log("部署网络:", network.name, `(chainId: ${network.chainId})`);
   console.log("部署账户:", deployer.address);
+  console.log("客户钱包:", CUSTOMER_WALLET);
 
   const balance = await ethers.provider.getBalance(deployer.address);
   console.log("账户余额:", ethers.formatEther(balance), "BNB");
@@ -38,12 +46,11 @@ async function main() {
   } else if (network.chainId === 56n) {
     // BSC 主网
     console.log("使用 BSC 主网配置...");
-    // TODO: 填入主网代币地址
-    rewardToken = "0x..."; // AGG Token (主网)
-    lpToken = "0x...";     // LP Token (主网)
+    rewardToken = "0x5d4613b686C087Cc97aa96a291bd86255F970999"; // AGG Token (主网)
+    lpToken = "0x..."; // LP Token (主网) - TODO: 需要填入实际LP地址
 
-    if (rewardToken === "0x..." || lpToken === "0x...") {
-      console.error("错误: 请先配置主网代币地址!");
+    if (lpToken === "0x...") {
+      console.error("错误: 请先配置主网 LP Token 地址!");
       process.exit(1);
     }
   } else {
@@ -78,6 +85,13 @@ async function main() {
   console.log("LPMiningV2 地址:", address);
   console.log("---");
 
+  // ========== 转移 Owner 权限给客户 ==========
+  console.log("\n正在转移 Owner 权限给客户钱包...");
+  const transferTx = await lpMining.transferOwnership(CUSTOMER_WALLET);
+  await transferTx.wait();
+  console.log("Owner 已转移到:", CUSTOMER_WALLET);
+  console.log("---");
+
   // 读取合约配置
   const totalRewards = await lpMining.totalRewards();
   const miningDuration = await lpMining.miningDuration();
@@ -95,19 +109,16 @@ async function main() {
 
   // ========== 后续操作提示 ==========
   console.log("\n后续操作:");
-  console.log("1. 向合约转入 AGG 奖励代币");
+  console.log("1. 向合约转入 AGG 奖励代币（由客户操作）");
   console.log(`   代币地址: ${rewardToken}`);
   console.log(`   接收地址: ${address}`);
   console.log("");
-  console.log("2. 配置分流地址 (可选)");
+  console.log("2. 配置分流地址（由客户操作）");
   console.log("   调用: setSplitAddresses(addresses[], rates[])");
   console.log("");
   console.log("3. 更新前端配置");
   console.log("   文件: frontend/src/utils/constants.js");
   console.log(`   LP_MINING: '${address}'`);
-  console.log("");
-  console.log("4. 如需转移 Owner 权限");
-  console.log("   调用: transferOwnership(newOwner)");
   console.log("========================================");
 
   // 保存部署信息
@@ -121,6 +132,7 @@ async function main() {
     startTime,
     deployedAt: new Date().toISOString(),
     deployer: deployer.address,
+    finalOwner: CUSTOMER_WALLET,
     version: "2.1"
   };
 
