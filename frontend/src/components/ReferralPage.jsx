@@ -179,12 +179,49 @@ export default function ReferralPage({
   };
 
   // 复制推荐链接
-  const copyReferralLink = () => {
+  const copyReferralLink = async () => {
     const link = `${window.location.origin}?ref=${account}`;
-    navigator.clipboard.writeText(link);
-    setCopied(true);
-    toast.success(t('toast.referralLinkCopied'));
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        // fallback: 兼容 DApp 浏览器和不支持 clipboard API 的环境
+        const textArea = document.createElement('textarea');
+        textArea.value = link;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '-9999px';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopied(true);
+      toast.success(t('toast.referralLinkCopied'));
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      // clipboard API 失败时使用 fallback
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = link;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '-9999px';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setCopied(true);
+        toast.success(t('toast.referralLinkCopied'));
+        setTimeout(() => setCopied(false), 2000);
+      } catch (e) {
+        toast.error('复制失败，请手动复制: ' + link);
+      }
+    }
   };
 
   // 设置推荐人
