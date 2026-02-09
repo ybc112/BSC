@@ -9,7 +9,7 @@ export const CONTRACTS = {
 
   // LP 相关
   LP_TOKEN: '0x7552081681410f1828a02cfeb865ea444fb21909',           // PancakeSwap LP Token (AGG/USDT)
-  LP_MINING: '0x97060F561D1890bFAc0714B373123448486F13f8',          // LPMiningV2 合约地址
+  LP_MINING: '0x1c6324F8B919d20e47212BB7b5090829ba063183',          // LPMiningV2 V2.1 合约地址 (新部署)
   TOKEN_V2_PAIR: '0x7552081681410f1828a02cfeb865ea444fb21909',      // AGG/USDT 交易对地址
 
   // 空投 Vault (USDT 自动转账)
