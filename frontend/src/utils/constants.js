@@ -7,6 +7,9 @@ export const CONTRACTS = {
   // TokenMiningV2 (多档锁仓挖矿) - 客户部署的版本
   TOKEN_MINING_V2: '0xB4089956A0b775638e8F9F2E17deaE35B102c860',
 
+  // TokenMiningV3 (多档锁仓挖矿 + 推荐奖励)
+  TOKEN_MINING_V3: '0x982D6E5a70034d34837BF7c5DACCee8D188c6913',
+
   // LP 相关
   LP_TOKEN: '0x7552081681410f1828a02cfeb865ea444fb21909',           // PancakeSwap LP Token (AGG/USDT)
   LP_MINING: '0x1c6324F8B919d20e47212BB7b5090829ba063183',          // LPMiningV2 V2.1 合约地址 (新部署)
@@ -85,6 +88,12 @@ export const MINING_CONFIG = {
     DAILY_RATE: 0.5, // 0.5%
     APY: 182.5, // 0.5% * 365
     LOCK_PERIOD: 0, // 无锁仓
+  },
+  // V3 代币挖矿 - 多档锁仓 + 推荐奖励
+  TOKEN_MINING_V3: {
+    TOTAL_REWARDS: 20_000_000,
+    REFERRAL_RATES: [10, 8, 5], // 3代推荐：10%, 8%, 5%
+    REFERRAL_LEVELS: 3,
   },
   // V2 代币 - 买卖滑点
   TOKEN_V2: {

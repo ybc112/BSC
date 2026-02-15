@@ -166,6 +166,71 @@ export const TOKEN_MINING_V2_ABI = [
   "event MiningEnded(uint256 totalDistributed)"
 ];
 
+// TokenMiningV3 ABI - 多档锁仓挖矿 + 推荐奖励
+export const TOKEN_MINING_V3_ABI = [
+  // 读取函数
+  "function stakingToken() view returns (address)",
+  "function rewardToken() view returns (address)",
+  "function totalStaked() view returns (uint256)",
+  "function totalDistributed() view returns (uint256)",
+  "function startTime() view returns (uint256)",
+  "function miningEnded() view returns (bool)",
+  "function totalRewards() view returns (uint256)",
+  "function RATE_BASE() view returns (uint256)",
+  "function SECONDS_PER_DAY() view returns (uint256)",
+  "function totalReferralDistributed() view returns (uint256)",
+  "function owner() view returns (address)",
+
+  // 用户信息（9个字段，含推荐信息）
+  "function userInfo(address) view returns (uint256 totalStaked, uint256 totalClaimed, uint256 stakeCount, uint256 activeStakeCount, address referrer, uint256 directReferrals, uint256 referralRewards, uint256 totalReferralClaimed)",
+  "function stakeRecords(address, uint256) view returns (uint256 amount, uint256 lastUpdateTime, uint256 pendingRewards, uint256 unlockTime, uint8 tier, bool active)",
+  "function pendingReward(address user, uint256 stakeId) view returns (uint256)",
+  "function pendingRewardAll(address user) view returns (uint256)",
+  "function getUserStakes(address user) view returns (uint256[] stakeIds, uint256[] amounts, uint256[] unlockTimes, uint8[] tiers, uint256[] pendingRewards, bool[] actives)",
+  "function getStakeRecord(address user, uint256 stakeId) view returns (uint256 amount, uint256 unlockTime, uint8 tier, uint256 pending, bool active)",
+  "function getUserInfo(address user) view returns (uint256 _totalStaked, uint256 _totalClaimed, uint256 _stakeCount, uint256 _pendingRewards, uint256 _activeStakeCount, address _referrer, uint256 _directReferrals, uint256 _referralRewards, uint256 _totalReferralClaimed)",
+  "function getUserActiveStakeCount(address user) view returns (uint256 activeCount)",
+  "function getMiningStatus() view returns (uint256 _totalStaked, uint256 _totalDistributed, uint256 _remainingRewards, bool _miningEnded, uint256 _startTime, uint256 _totalReferralDistributed)",
+
+  // 档位配置
+  "function tierConfigs(uint8) view returns (uint256 duration, uint256 dailyRate)",
+  "function getTierConfig(uint8 tier) view returns (uint256 duration, uint256 dailyRate, uint256 annualAPY)",
+  "function getAllTierConfigs() view returns (uint256[4] durations, uint256[4] dailyRates, uint256[4] annualAPYs)",
+
+  // 推荐系统
+  "function hasReferrer(address) view returns (bool)",
+  "function getReferralRates() view returns (uint256[])",
+  "function getReferralLevels() view returns (uint256)",
+  "function getReferrals(address) view returns (address[])",
+  "function getReferralsPaginated(address user, uint256 offset, uint256 limit) view returns (address[] result, uint256 total)",
+
+  // 写入函数
+  "function deposit(uint256 amount, uint8 tier)",
+  "function withdraw(uint256 stakeId)",
+  "function claim(uint256 stakeId)",
+  "function claimAll()",
+  "function setReferrer(address referrer)",
+  "function claimReferralRewards()",
+
+  // 管理员函数
+  "function setTierConfig(uint8 tier, uint256 duration, uint256 dailyRate)",
+  "function setTotalRewards(uint256 _totalRewards)",
+  "function setReferralRates(uint256[] rates)",
+  "function emergencyWithdraw(address token, uint256 amount)",
+
+  // 事件
+  "event Deposit(address indexed user, uint256 indexed stakeId, uint256 amount, uint8 tier, uint256 unlockTime)",
+  "event Withdraw(address indexed user, uint256 indexed stakeId, uint256 amount)",
+  "event Claim(address indexed user, uint256 indexed stakeId, uint256 amount)",
+  "event ClaimAll(address indexed user, uint256 amount)",
+  "event ReferrerSet(address indexed user, address indexed referrer)",
+  "event ReferralReward(address indexed user, address indexed referrer, uint256 level, uint256 amount)",
+  "event ClaimReferralRewards(address indexed user, uint256 amount)",
+  "event ReferralRatesUpdated(uint256[] rates)",
+  "event TierConfigUpdated(uint8 tier, uint256 duration, uint256 dailyRate)",
+  "event MiningEnded(uint256 totalDistributed)"
+];
+
 // ProjectTokenV2 ABI - 带滑点代币
 export const PROJECT_TOKEN_V2_ABI = [
   // ERC20基础

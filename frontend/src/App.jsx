@@ -13,7 +13,7 @@ import ReferralPage from './components/ReferralPage';
 import AdminPage from './components/AdminPage';
 
 import { useWallet } from './hooks/useWallet';
-import { useContracts, useLPMining, useTokenMiningV2, useTokenBalance, useAllowance, useVault } from './hooks/useContracts';
+import { useContracts, useLPMining, useTokenMiningV2, useTokenMiningV3, useTokenBalance, useAllowance, useVault } from './hooks/useContracts';
 import { CONTRACTS, formatAddress } from './utils/constants';
 import { useLanguage } from './contexts/LanguageContext';
 
@@ -39,6 +39,7 @@ function App() {
   const contracts = useContracts(signer, provider);
   const lpMiningData = useLPMining(contracts.lpMining, account);
   const tokenMiningV2Data = useTokenMiningV2(contracts.tokenMiningV2, account);
+  const tokenMiningV3Data = useTokenMiningV3(contracts.tokenMiningV3, account);
   // Vault 使用 USDT 合约
   const vaultData = useVault(contracts.vault, contracts.usdt, account);
 
@@ -57,6 +58,12 @@ function App() {
     account,
     CONTRACTS.TOKEN_MINING_V2
   );
+  // TokenMiningV3 也需要授权 ProjectTokenV2 代币
+  const { allowance: tokenAllowanceV3, refetch: refetchTokenAllowanceV3 } = useAllowance(
+    contracts.projectTokenV2,
+    account,
+    CONTRACTS.TOKEN_MINING_V3
+  );
 
   // 检查是否是管理员
   useEffect(() => {
@@ -68,12 +75,13 @@ function App() {
         return;
       }
       // 只要有任意一个合约实例就进行检查
-      const contractList = [contracts.lpMining, contracts.tokenMiningV2, contracts.projectTokenV2];
+      const contractList = [contracts.lpMining, contracts.tokenMiningV2, contracts.projectTokenV2, contracts.tokenMiningV3];
       const hasContract = contractList.some(c => c);
       console.log('[Admin Check] Contracts available:', {
         lpMining: !!contracts.lpMining,
         tokenMiningV2: !!contracts.tokenMiningV2,
         projectTokenV2: !!contracts.projectTokenV2,
+        tokenMiningV3: !!contracts.tokenMiningV3,
         hasAny: hasContract
       });
       if (!hasContract) {
@@ -101,7 +109,7 @@ function App() {
       }
     };
     checkAdmin();
-  }, [account, contracts.lpMining, contracts.tokenMiningV2, contracts.projectTokenV2]);
+  }, [account, contracts.lpMining, contracts.tokenMiningV2, contracts.projectTokenV2, contracts.tokenMiningV3]);
 
   // 检查 URL 参数中的推荐人
   useEffect(() => {
@@ -119,21 +127,14 @@ function App() {
     }
   }, []);
 
-  // 自动绑定推荐人 - 改为显示确认弹窗
+  // 自动绑定推荐人 - 改为显示确认弹窗（同时检查LP Mining和Token Mining V3）
   useEffect(() => {
     const checkReferrer = async () => {
-      if (!account || !contracts?.lpMining || !pendingReferrer) return;
+      if (!account || !pendingReferrer) return;
+      // 至少需要一个合约可用
+      if (!contracts?.lpMining && !contracts?.tokenMiningV3) return;
 
       try {
-        // 检查是否已经有推荐人
-        const hasRef = await contracts.lpMining.hasReferrer(account);
-        if (hasRef) {
-          // 已有推荐人，清除待绑定状态
-          localStorage.removeItem('referrer');
-          setPendingReferrer(null);
-          return;
-        }
-
         // 检查推荐人是否有效（不是自己）
         if (pendingReferrer.toLowerCase() === account.toLowerCase()) {
           toast.error(t('toast.cannotReferSelf'));
@@ -142,7 +143,29 @@ function App() {
           return;
         }
 
-        // 显示确认弹窗
+        // 检查两个合约是否都已有推荐人
+        let lpHasRef = true;
+        let v3HasRef = true;
+
+        if (contracts?.lpMining) {
+          try {
+            lpHasRef = await contracts.lpMining.hasReferrer(account);
+          } catch { lpHasRef = true; }
+        }
+        if (contracts?.tokenMiningV3) {
+          try {
+            v3HasRef = await contracts.tokenMiningV3.hasReferrer(account);
+          } catch { v3HasRef = true; }
+        }
+
+        if (lpHasRef && v3HasRef) {
+          // 两个合约都已有推荐人，清除待绑定状态
+          localStorage.removeItem('referrer');
+          setPendingReferrer(null);
+          return;
+        }
+
+        // 至少一个合约未绑定，显示确认弹窗
         setShowReferrerModal(true);
       } catch (err) {
         console.error('Check referrer error:', err);
@@ -150,18 +173,64 @@ function App() {
     };
 
     checkReferrer();
-  }, [account, contracts?.lpMining, pendingReferrer]);
+  }, [account, contracts?.lpMining, contracts?.tokenMiningV3, pendingReferrer]);
 
-  // 确认绑定推荐人
+  // 确认绑定推荐人（同时绑定LP Mining和Token Mining V3）
   const handleConfirmBind = async () => {
-    if (!contracts?.lpMining || !pendingReferrer) return;
+    if (!pendingReferrer) return;
+    if (!contracts?.lpMining && !contracts?.tokenMiningV3) return;
 
     setIsBindingReferrer(true);
     try {
-      const tx = await contracts.lpMining.setReferrer(pendingReferrer);
-      toast.loading(t('toast.bindingReferrer'), { id: 'bindRef' });
-      await tx.wait();
-      toast.success(t('toast.bindSuccess'), { id: 'bindRef' });
+      const bindPromises = [];
+
+      // LP Mining 绑定
+      if (contracts?.lpMining) {
+        try {
+          const hasRef = await contracts.lpMining.hasReferrer(account);
+          if (!hasRef) {
+            bindPromises.push(
+              contracts.lpMining.setReferrer(pendingReferrer)
+                .then(tx => tx.wait())
+                .then(() => ({ contract: 'LP Mining', success: true }))
+                .catch(err => ({ contract: 'LP Mining', success: false, error: err }))
+            );
+          }
+        } catch {}
+      }
+
+      // Token Mining V3 绑定
+      if (contracts?.tokenMiningV3) {
+        try {
+          const hasRef = await contracts.tokenMiningV3.hasReferrer(account);
+          if (!hasRef) {
+            bindPromises.push(
+              contracts.tokenMiningV3.setReferrer(pendingReferrer)
+                .then(tx => tx.wait())
+                .then(() => ({ contract: 'Token Mining V3', success: true }))
+                .catch(err => ({ contract: 'Token Mining V3', success: false, error: err }))
+            );
+          }
+        } catch {}
+      }
+
+      if (bindPromises.length === 0) {
+        toast.success(t('toast.bindSuccess'));
+      } else {
+        toast.loading(t('toast.bindingReferrer'), { id: 'bindRef' });
+        const results = await Promise.allSettled(bindPromises);
+        const resolvedResults = results.map(r => r.status === 'fulfilled' ? r.value : { success: false });
+        const allSuccess = resolvedResults.every(r => r.success);
+        const anySuccess = resolvedResults.some(r => r.success);
+
+        if (allSuccess) {
+          toast.success(t('toast.bindSuccess'), { id: 'bindRef' });
+        } else if (anySuccess) {
+          toast.success(t('toast.bindSuccess'), { id: 'bindRef' });
+        } else {
+          toast.error(t('toast.bindFailed'), { id: 'bindRef' });
+        }
+      }
 
       // 清除推荐人缓存
       localStorage.removeItem('referrer');
@@ -187,11 +256,13 @@ function App() {
   const handleRefresh = () => {
     lpMiningData.refetch();
     tokenMiningV2Data.refetch();
+    tokenMiningV3Data.refetch();
     vaultData.refetch();
     refetchLpBalance();
     refetchTokenBalance();
     refetchLpAllowance();
     refetchTokenAllowance();
+    refetchTokenAllowanceV3();
   };
 
   const renderPage = () => {
@@ -212,8 +283,10 @@ function App() {
           <TokenMiningPage
             account={account}
             tokenMiningV2Data={tokenMiningV2Data}
+            tokenMiningV3Data={tokenMiningV3Data}
             tokenBalance={tokenBalance}
             tokenAllowance={tokenAllowance}
+            tokenAllowanceV3={tokenAllowanceV3}
             contracts={contracts}
             onRefresh={handleRefresh}
           />

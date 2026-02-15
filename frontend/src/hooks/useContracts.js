@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { CONTRACTS } from '../utils/constants';
-import { LP_MINING_ABI, TOKEN_MINING_ABI, ERC20_ABI, TOKEN_MINING_V2_ABI, PROJECT_TOKEN_V2_ABI, VAULT_ABI } from '../abi';
+import { LP_MINING_ABI, TOKEN_MINING_ABI, ERC20_ABI, TOKEN_MINING_V2_ABI, TOKEN_MINING_V3_ABI, PROJECT_TOKEN_V2_ABI, VAULT_ABI } from '../abi';
 
 // 带重试的异步调用函数
 const retryCall = async (fn, retries = 3, delay = 1000) => {
@@ -25,6 +25,8 @@ export function useContracts(signer, provider) {
     // V2 合约
     tokenMiningV2: null,
     projectTokenV2: null,
+    // V3 合约
+    tokenMiningV3: null,
     // Vault 合约
     vault: null,
     // USDT 合约
@@ -43,6 +45,7 @@ export function useContracts(signer, provider) {
     let lpToken = null;
     let tokenMiningV2 = null;
     let projectTokenV2 = null;
+    let tokenMiningV3 = null;
     let vault = null;
     let usdt = null;
 
@@ -64,6 +67,9 @@ export function useContracts(signer, provider) {
     if (CONTRACTS.PROJECT_TOKEN_V2) {
       projectTokenV2 = new ethers.Contract(CONTRACTS.PROJECT_TOKEN_V2, PROJECT_TOKEN_V2_ABI, signerOrProvider);
     }
+    if (CONTRACTS.TOKEN_MINING_V3) {
+      tokenMiningV3 = new ethers.Contract(CONTRACTS.TOKEN_MINING_V3, TOKEN_MINING_V3_ABI, signerOrProvider);
+    }
     if (CONTRACTS.VAULT) {
       vault = new ethers.Contract(CONTRACTS.VAULT, VAULT_ABI, signerOrProvider);
     }
@@ -71,7 +77,7 @@ export function useContracts(signer, provider) {
       usdt = new ethers.Contract(CONTRACTS.USDT, ERC20_ABI, signerOrProvider);
     }
 
-    setContracts({ lpMining, tokenMining, rewardToken, lpToken, tokenMiningV2, projectTokenV2, vault, usdt });
+    setContracts({ lpMining, tokenMining, rewardToken, lpToken, tokenMiningV2, projectTokenV2, tokenMiningV3, vault, usdt });
   }, [signer, provider]);
 
   return contracts;
@@ -347,6 +353,125 @@ export function useTokenMiningV2(contract, account) {
       });
     } catch (err) {
       console.error('Fetch TokenMiningV2 data error:', err);
+      setData(prev => ({ ...prev, loading: false }));
+    }
+  }, [contract, account]);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 15000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  return { ...data, refetch: fetchData };
+}
+
+// TokenMiningV3 Hook - 多档锁仓挖矿 + 推荐奖励
+export function useTokenMiningV3(contract, account) {
+  const [data, setData] = useState({
+    userInfo: null,
+    stakes: [],
+    miningStatus: null,
+    tierConfigs: null,
+    pendingRewardAll: '0',
+    referralRates: [],
+    referralLevels: 0,
+    referrals: [],
+    referralsTotal: 0,
+    loading: true,
+  });
+
+  const fetchData = useCallback(async () => {
+    if (!contract) {
+      setData(prev => ({ ...prev, loading: false }));
+      return;
+    }
+
+    try {
+      const miningStatus = await retryCall(() => contract.getMiningStatus());
+      const tierConfigs = await retryCall(() => contract.getAllTierConfigs());
+
+      // 获取推荐配置
+      let referralRates = [];
+      let referralLevels = 0;
+      try {
+        referralRates = await retryCall(() => contract.getReferralRates());
+        referralLevels = Number(await retryCall(() => contract.getReferralLevels()));
+      } catch (err) {
+        console.error('Fetch referral config error:', err);
+      }
+
+      let userInfo = null;
+      let stakes = [];
+      let pendingRewardAll = '0';
+      let referrals = [];
+      let referralsTotal = 0;
+
+      if (account) {
+        userInfo = await retryCall(() => contract.getUserInfo(account));
+        pendingRewardAll = await retryCall(() => contract.pendingRewardAll(account));
+
+        // 获取用户所有质押记录
+        try {
+          const userStakes = await retryCall(() => contract.getUserStakes(account));
+          stakes = userStakes.stakeIds.map((id, index) => ({
+            stakeId: Number(id),
+            amount: ethers.formatEther(userStakes.amounts[index]),
+            unlockTime: Number(userStakes.unlockTimes[index]),
+            tier: Number(userStakes.tiers[index]),
+            pendingReward: ethers.formatEther(userStakes.pendingRewards[index]),
+            active: userStakes.actives[index],
+          })).filter(s => s.active);
+        } catch (err) {
+          console.error('Fetch V3 stakes error:', err);
+          stakes = [];
+        }
+
+        // 获取直推列表（前10个）
+        try {
+          const refData = await retryCall(() => contract.getReferralsPaginated(account, 0, 10));
+          referrals = refData.result;
+          referralsTotal = Number(refData.total);
+        } catch (err) {
+          console.error('Fetch V3 referrals error:', err);
+        }
+      }
+
+      setData({
+        userInfo: userInfo ? {
+          totalStaked: ethers.formatEther(userInfo._totalStaked),
+          totalClaimed: ethers.formatEther(userInfo._totalClaimed),
+          stakeCount: Number(userInfo._stakeCount),
+          pendingRewards: ethers.formatEther(userInfo._pendingRewards),
+          activeStakeCount: Number(userInfo._activeStakeCount || 0),
+          referrer: userInfo._referrer,
+          directReferrals: Number(userInfo._directReferrals),
+          referralRewards: ethers.formatEther(userInfo._referralRewards),
+          totalReferralClaimed: ethers.formatEther(userInfo._totalReferralClaimed),
+        } : null,
+        stakes,
+        miningStatus: {
+          totalStaked: ethers.formatEther(miningStatus._totalStaked),
+          totalDistributed: ethers.formatEther(miningStatus._totalDistributed),
+          remainingRewards: ethers.formatEther(miningStatus._remainingRewards),
+          miningEnded: miningStatus._miningEnded,
+          startTime: Number(miningStatus._startTime),
+          totalReferralDistributed: ethers.formatEther(miningStatus._totalReferralDistributed),
+        },
+        tierConfigs: {
+          durations: tierConfigs.durations.map(d => Number(d) / 86400),
+          dailyRates: tierConfigs.dailyRates.map(r => Number(r) / 100),
+          annualAPYs: tierConfigs.annualAPYs.map(a => Number(a) / 100),
+        },
+        pendingRewardAll: ethers.formatEther(pendingRewardAll),
+        referralRates: referralRates.map(r => Number(r) / 100), // 转为百分比
+        referralLevels,
+        referrals,
+        referralsTotal,
+        loading: false,
+      });
+    } catch (err) {
+      console.error('Fetch TokenMiningV3 data error:', err);
       setData(prev => ({ ...prev, loading: false }));
     }
   }, [contract, account]);
