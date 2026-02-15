@@ -296,6 +296,7 @@ function App() {
           <ReferralPage
             account={account}
             lpMiningData={lpMiningData}
+            tokenMiningV3Data={tokenMiningV3Data}
             contracts={contracts}
             onRefresh={handleRefresh}
           />
@@ -307,6 +308,7 @@ function App() {
             contracts={contracts}
             lpMiningData={lpMiningData}
             tokenMiningV2Data={tokenMiningV2Data}
+            tokenMiningV3Data={tokenMiningV3Data}
             onRefresh={handleRefresh}
           />
         );
@@ -412,7 +414,7 @@ function App() {
             border: '1px solid rgba(0, 217, 165, 0.2)',
             backdropFilter: 'blur(10px)',
             borderRadius: '12px',
-            fontFamily: 'Space Grotesk, sans-serif',
+            fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif',
           },
           success: {
             iconTheme: {
@@ -463,7 +465,7 @@ function App() {
             </div>
             <div className="flex items-center gap-6">
               <a
-                href="https://testnet.bscscan.com/address/0x2c556Fc2Baf45a9c57228119241d92871348676D"
+                href={`https://bscscan.com/address/${CONTRACTS.LP_MINING}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white/40 hover:text-[#00D9A5] text-sm transition-colors"
@@ -471,7 +473,7 @@ function App() {
                 {t('footer.lpMiningContract')}
               </a>
               <a
-                href="https://testnet.bscscan.com/address/0xD986ad28BE396ECC5CA882416AAF84F216ae08dc"
+                href={`https://bscscan.com/address/${CONTRACTS.TOKEN_MINING_V3}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white/40 hover:text-[#00D9A5] text-sm transition-colors"

@@ -813,37 +813,19 @@ export default function TokenMiningPage({
                   </div>
                 )}
 
-                {/* Set Referrer / Show Bound Referrer */}
+                {/* Show Bound Referrer / Go to Referral Page */}
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                   {hasReferrerBound ? (
                     <div>
                       <div className="text-sm text-white/50 mb-2">{t('tokenMining.referrerBound')}</div>
-                      <div className="p-3 rounded-lg bg-white/5 border border-white/5 font-mono text-white text-sm break-all">
+                      <div className="p-3 rounded-lg bg-white/5 border border-white/5 font-mono text-white text-sm break-all overflow-hidden">
                         {v3UserInfo.referrer}
                       </div>
                     </div>
                   ) : (
                     <div>
                       <div className="text-sm text-white/50 mb-2">{t('tokenMining.setReferrer')}</div>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={referrerInput}
-                          onChange={(e) => setReferrerInput(e.target.value)}
-                          placeholder={t('tokenMining.enterReferrerAddress')}
-                          className="flex-1 input-premium text-sm"
-                        />
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={handleSetReferrer}
-                          disabled={isSettingReferrer || !referrerInput}
-                          className="px-4 py-2 rounded-lg bg-[#00D9A5]/20 text-[#00D9A5] text-sm font-medium hover:bg-[#00D9A5]/30 transition-colors disabled:opacity-50 whitespace-nowrap"
-                        >
-                          {isSettingReferrer ? t('tokenMining.settingReferrer') : t('tokenMining.setReferrer')}
-                        </motion.button>
-                      </div>
-                      <div className="mt-2 p-3 rounded-lg bg-[#00D9A5]/5 border border-[#00D9A5]/10">
+                      <div className="p-3 rounded-lg bg-[#00D9A5]/5 border border-[#00D9A5]/10">
                         <div className="flex gap-2 text-xs">
                           <FiInfo className="w-3 h-3 text-[#00D9A5] mt-0.5 flex-shrink-0" />
                           <span className="text-white/50">{t('tokenMining.referrerTipDesc')}</span>

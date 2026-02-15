@@ -388,8 +388,42 @@ export function useTokenMiningV3(contract, account) {
     }
 
     try {
-      const miningStatus = await retryCall(() => contract.getMiningStatus());
-      const tierConfigs = await retryCall(() => contract.getAllTierConfigs());
+      // 分别获取数据，避免单个调用失败导致全部失败
+      let miningStatus = null;
+      try {
+        miningStatus = await retryCall(() => contract.getMiningStatus());
+      } catch (err) {
+        console.error('Fetch V3 getMiningStatus error (may be totalDistributed > totalRewards):', err);
+        // 尝试单独获取各项数据
+        try {
+          const [ts, td, me, st, trd] = await retryCall(() => Promise.all([
+            contract.totalStaked(),
+            contract.totalDistributed(),
+            contract.miningEnded(),
+            contract.startTime(),
+            contract.totalReferralDistributed(),
+          ]));
+          const tr = await retryCall(() => contract.totalRewards());
+          const remaining = td > tr ? BigInt(0) : tr - td;
+          miningStatus = {
+            _totalStaked: ts,
+            _totalDistributed: td,
+            _remainingRewards: remaining,
+            _miningEnded: me,
+            _startTime: st,
+            _totalReferralDistributed: trd,
+          };
+        } catch (err2) {
+          console.error('Fetch V3 fallback miningStatus error:', err2);
+        }
+      }
+
+      let tierConfigs = null;
+      try {
+        tierConfigs = await retryCall(() => contract.getAllTierConfigs());
+      } catch (err) {
+        console.error('Fetch V3 tierConfigs error:', err);
+      }
 
       // 获取推荐配置
       let referralRates = [];
@@ -408,8 +442,37 @@ export function useTokenMiningV3(contract, account) {
       let referralsTotal = 0;
 
       if (account) {
-        userInfo = await retryCall(() => contract.getUserInfo(account));
-        pendingRewardAll = await retryCall(() => contract.pendingRewardAll(account));
+        // getUserInfo 也可能因为 _calculateReward 失败，分别获取
+        try {
+          userInfo = await retryCall(() => contract.getUserInfo(account));
+        } catch (err) {
+          console.error('Fetch V3 getUserInfo error:', err);
+          // 尝试直接读取 userInfo storage
+          try {
+            const rawUserInfo = await retryCall(() => contract.userInfo(account));
+            userInfo = {
+              _totalStaked: rawUserInfo.totalStaked,
+              _totalClaimed: rawUserInfo.totalClaimed,
+              _stakeCount: rawUserInfo.stakeCount,
+              _pendingRewards: BigInt(0),
+              _activeStakeCount: rawUserInfo.activeStakeCount || BigInt(0),
+              _referrer: rawUserInfo.referrer,
+              _directReferrals: rawUserInfo.directReferrals,
+              _referralRewards: rawUserInfo.referralRewards,
+              _totalReferralClaimed: rawUserInfo.totalReferralClaimed,
+            };
+          } catch (err2) {
+            console.error('Fetch V3 raw userInfo error:', err2);
+          }
+        }
+
+        // pendingRewardAll 可能因 _calculateReward 失败
+        try {
+          pendingRewardAll = await retryCall(() => contract.pendingRewardAll(account));
+        } catch (err) {
+          console.error('Fetch V3 pendingRewardAll error:', err);
+          pendingRewardAll = BigInt(0);
+        }
 
         // 获取用户所有质押记录
         try {
@@ -423,8 +486,38 @@ export function useTokenMiningV3(contract, account) {
             active: userStakes.actives[index],
           })).filter(s => s.active);
         } catch (err) {
-          console.error('Fetch V3 stakes error:', err);
-          stakes = [];
+          console.error('Fetch V3 getUserStakes error, trying fallback:', err);
+          // 回退：逐个读取 stakeRecords
+          try {
+            const stakeCount = userInfo?._stakeCount ? Number(userInfo._stakeCount) : 0;
+            const fallbackStakes = [];
+            for (let i = 0; i < stakeCount; i++) {
+              try {
+                const record = await contract.stakeRecords(account, i);
+                if (record.active) {
+                  let pending = '0';
+                  try {
+                    const p = await contract.pendingReward(account, i);
+                    pending = ethers.formatEther(p);
+                  } catch { /* pending reward calculation failed, show 0 */ }
+                  fallbackStakes.push({
+                    stakeId: i,
+                    amount: ethers.formatEther(record.amount),
+                    unlockTime: Number(record.unlockTime),
+                    tier: Number(record.tier),
+                    pendingReward: pending,
+                    active: true,
+                  });
+                }
+              } catch (e) {
+                console.error(`Fetch V3 stakeRecord ${i} error:`, e);
+              }
+            }
+            stakes = fallbackStakes;
+          } catch (err2) {
+            console.error('Fetch V3 fallback stakes error:', err2);
+            stakes = [];
+          }
         }
 
         // 获取直推列表（前10个）
@@ -450,21 +543,21 @@ export function useTokenMiningV3(contract, account) {
           totalReferralClaimed: ethers.formatEther(userInfo._totalReferralClaimed),
         } : null,
         stakes,
-        miningStatus: {
+        miningStatus: miningStatus ? {
           totalStaked: ethers.formatEther(miningStatus._totalStaked),
           totalDistributed: ethers.formatEther(miningStatus._totalDistributed),
           remainingRewards: ethers.formatEther(miningStatus._remainingRewards),
           miningEnded: miningStatus._miningEnded,
           startTime: Number(miningStatus._startTime),
           totalReferralDistributed: ethers.formatEther(miningStatus._totalReferralDistributed),
-        },
-        tierConfigs: {
+        } : null,
+        tierConfigs: tierConfigs ? {
           durations: tierConfigs.durations.map(d => Number(d) / 86400),
           dailyRates: tierConfigs.dailyRates.map(r => Number(r) / 100),
           annualAPYs: tierConfigs.annualAPYs.map(a => Number(a) / 100),
-        },
+        } : null,
         pendingRewardAll: ethers.formatEther(pendingRewardAll),
-        referralRates: referralRates.map(r => Number(r) / 100), // 转为百分比
+        referralRates: referralRates.map ? referralRates.map(r => Number(r) / 100) : [],
         referralLevels,
         referrals,
         referralsTotal,

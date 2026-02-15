@@ -385,6 +385,11 @@ const translations = {
       tokenMiningV2Owner: 'TokenMiningV2 Owner:',
       projectTokenV2Owner: 'ProjectTokenV2 Owner:',
       notLoaded: '未加载',
+      notSet: '未设置',
+      addLevel: '添加代数',
+      removeLevel: '删除代数',
+      referralRatesV3Desc: '设置 TokenMiningV3 的推荐奖励比例，支持 1-20 代推荐。比例值为百分比。',
+      referralRatesV3Note: '注意：保存后将覆盖所有现有推荐代数设置。',
     },
     // App (Referrer Modal)
     app: {
@@ -470,6 +475,7 @@ const translations = {
       settingFailed: '设置失败',
       operationFailed: '操作失败',
       fillValidAddress: '请至少填写一个有效地址',
+      fillValidRate: '请至少填写一个有效比例',
       fillLevelConfig: '请至少填写一个等级配置',
       addressCopied: '已复制地址',
       transferring: '转移中...',
@@ -860,6 +866,11 @@ const translations = {
       tokenMiningV2Owner: 'TokenMiningV2 Owner:',
       projectTokenV2Owner: 'ProjectTokenV2 Owner:',
       notLoaded: 'Not Loaded',
+      notSet: 'Not Set',
+      addLevel: 'Add Level',
+      removeLevel: 'Remove Level',
+      referralRatesV3Desc: 'Set TokenMiningV3 referral reward rates. Supports 1-20 levels. Values are percentages.',
+      referralRatesV3Note: 'Note: Saving will overwrite all existing referral level settings.',
     },
     // App (Referrer Modal)
     app: {
@@ -945,6 +956,7 @@ const translations = {
       settingFailed: 'Setting failed',
       operationFailed: 'Operation failed',
       fillValidAddress: 'Please fill at least one valid address',
+      fillValidRate: 'Please fill at least one valid rate',
       fillLevelConfig: 'Please fill at least one level config',
       addressCopied: 'Address copied',
       transferring: 'Transferring...',

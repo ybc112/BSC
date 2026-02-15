@@ -15,6 +15,7 @@ export default function AdminPage({
   contracts,
   lpMiningData,
   tokenMiningV2Data,
+  tokenMiningV3Data,
   onRefresh
 }) {
   const { t } = useLanguage();
@@ -63,11 +64,22 @@ export default function AdminPage({
     feeReceiver: '',
   });
 
+  // TokenMiningV3 配置
+  const [tokenV3Config, setTokenV3Config] = useState({
+    totalRewards: '',
+    tier0Rate: '',
+    tier1Rate: '',
+    tier2Rate: '',
+    tier3Rate: '',
+    referralRates: [''], // 动态数组，支持1-20代
+  });
+
   // Owner 状态
   const [owners, setOwners] = useState({
     lpMining: null,
     tokenMiningV2: null,
     projectTokenV2: null,
+    tokenMiningV3: null,
   });
   const [loadingOwners, setLoadingOwners] = useState(true);
 
@@ -80,6 +92,7 @@ export default function AdminPage({
           contracts.lpMining?.owner().catch(() => null),
           contracts.tokenMiningV2?.owner().catch(() => null),
           contracts.projectTokenV2?.owner().catch(() => null),
+          contracts.tokenMiningV3?.owner().catch(() => null),
         ]);
         console.log('Loaded owners:', results);
         console.log('Current account:', account);
@@ -87,6 +100,7 @@ export default function AdminPage({
           lpMining: results[0],
           tokenMiningV2: results[1],
           projectTokenV2: results[2],
+          tokenMiningV3: results[3],
         });
       } catch (err) {
         console.error('Load owners error:', err);
@@ -94,17 +108,17 @@ export default function AdminPage({
         setLoadingOwners(false);
       }
     };
-    if (contracts.lpMining || contracts.tokenMiningV2 || contracts.projectTokenV2) {
+    if (contracts.lpMining || contracts.tokenMiningV2 || contracts.projectTokenV2 || contracts.tokenMiningV3) {
       loadOwners();
     }
-  }, [contracts.lpMining, contracts.tokenMiningV2, contracts.projectTokenV2, account]);
+  }, [contracts.lpMining, contracts.tokenMiningV2, contracts.projectTokenV2, contracts.tokenMiningV3, account]);
 
   const isOwner = (contract) => {
     const owner = owners[contract];
     return owner && account && owner.toLowerCase() === account.toLowerCase();
   };
 
-  const isAnyOwner = isOwner('lpMining') || isOwner('tokenMiningV2') || isOwner('projectTokenV2');
+  const isAnyOwner = isOwner('lpMining') || isOwner('tokenMiningV2') || isOwner('projectTokenV2') || isOwner('tokenMiningV3');
 
   // ============ LP Mining 管理函数 ============
   const handleSetLockDuration = async () => {
@@ -365,6 +379,87 @@ export default function AdminPage({
     }
   };
 
+  // ============ TokenMiningV3 管理函数 ============
+  const handleSetTotalRewardsV3 = async () => {
+    if (!contracts?.tokenMiningV3 || !tokenV3Config.totalRewards) return;
+    setIsUpdating(true);
+    try {
+      const totalRewards = ethers.parseEther(tokenV3Config.totalRewards);
+      const tx = await contracts.tokenMiningV3.setTotalRewards(totalRewards);
+      toast.loading(t('toast.settingTotalRewards'), { id: 'setTotalV3' });
+      await tx.wait();
+      toast.success(t('toast.totalRewardsSuccess'), { id: 'setTotalV3' });
+      setTokenV3Config(prev => ({ ...prev, totalRewards: '' }));
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setTotalV3' });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleSetTierConfigV3 = async (tier) => {
+    const rateKey = `tier${tier}Rate`;
+    const rate = tokenV3Config[rateKey];
+    if (!contracts?.tokenMiningV3 || !rate) return;
+    setIsUpdating(true);
+    try {
+      const dailyRate = Math.floor(parseFloat(rate) * 100);
+      const tierConfig = await contracts.tokenMiningV3.getTierConfig(tier);
+      const tx = await contracts.tokenMiningV3.setTierConfig(tier, tierConfig.duration, dailyRate);
+      toast.loading(t('toast.settingTierRate'), { id: 'setTierV3' });
+      await tx.wait();
+      toast.success(t('toast.tierRateSuccess'), { id: 'setTierV3' });
+      setTokenV3Config(prev => ({ ...prev, [rateKey]: '' }));
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setTierV3' });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleSetReferralRatesV3 = async () => {
+    if (!contracts?.tokenMiningV3) return;
+    const validRates = tokenV3Config.referralRates.filter(r => r !== '' && r !== undefined);
+    if (validRates.length === 0) {
+      toast.error(t('toast.fillValidRate'));
+      return;
+    }
+    setIsUpdating(true);
+    try {
+      // rates 转换为 basis points (如 10% = 1000)
+      const ratesInBP = validRates.map(r => Math.floor(parseFloat(r) * 100));
+      const tx = await contracts.tokenMiningV3.setReferralRates(ratesInBP);
+      toast.loading(t('toast.settingReferralRates'), { id: 'setRefV3' });
+      await tx.wait();
+      toast.success(t('toast.referralRatesSuccess'), { id: 'setRefV3' });
+      setTokenV3Config(prev => ({ ...prev, referralRates: [''] }));
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err.reason || t('toast.settingFailed'), { id: 'setRefV3' });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // V3 推荐代数增减
+  const addReferralLevel = () => {
+    if (tokenV3Config.referralRates.length >= 20) return;
+    setTokenV3Config(prev => ({
+      ...prev,
+      referralRates: [...prev.referralRates, ''],
+    }));
+  };
+
+  const removeReferralLevel = () => {
+    if (tokenV3Config.referralRates.length <= 1) return;
+    setTokenV3Config(prev => ({
+      ...prev,
+      referralRates: prev.referralRates.slice(0, -1),
+    }));
+  };
+
   // 复制地址
   const copyAddress = (address) => {
     navigator.clipboard.writeText(address);
@@ -417,6 +512,9 @@ export default function AdminPage({
             <p className="text-xs text-white/60">
               {t('admin.projectTokenV2Owner')} <code className="text-[#FFB800]">{owners.projectTokenV2 || t('admin.notLoaded')}</code>
             </p>
+            <p className="text-xs text-white/60">
+              TokenMiningV3 Owner: <code className="text-[#FFB800]">{owners.tokenMiningV3 || t('admin.notLoaded')}</code>
+            </p>
           </div>
         </div>
       </div>
@@ -425,10 +523,12 @@ export default function AdminPage({
 
   const { contractConfig } = lpMiningData || {};
   const { tierConfigs, miningStatus: tokenV2Status } = tokenMiningV2Data || {};
+  const { tierConfigs: v3TierConfigs, miningStatus: tokenV3Status, referralRates: currentV3ReferralRates } = tokenMiningV3Data || {};
 
   const tabs = [
     { id: 'lp-mining', name: 'LP Mining', icon: <FiLayers />, hasAccess: isOwner('lpMining') },
     { id: 'token-mining-v2', name: 'TokenMining V2', icon: <FiDollarSign />, hasAccess: isOwner('tokenMiningV2') },
+    { id: 'token-mining-v3', name: 'TokenMining V3', icon: <FiUsers />, hasAccess: isOwner('tokenMiningV3') },
     { id: 'project-token-v2', name: 'ProjectToken V2', icon: <FiPercent />, hasAccess: isOwner('projectTokenV2') },
   ];
 
@@ -468,10 +568,11 @@ export default function AdminPage({
       </div>
 
       {/* Contract Addresses */}
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { name: 'LP Mining', address: CONTRACTS.LP_MINING, isOwner: isOwner('lpMining') },
           { name: 'TokenMining V2', address: CONTRACTS.TOKEN_MINING_V2, isOwner: isOwner('tokenMiningV2') },
+          { name: 'TokenMining V3', address: CONTRACTS.TOKEN_MINING_V3, isOwner: isOwner('tokenMiningV3') },
           { name: 'ProjectToken V2', address: CONTRACTS.PROJECT_TOKEN_V2, isOwner: isOwner('projectTokenV2') },
         ].map((contract) => (
           <div key={contract.name} className="p-4 rounded-xl bg-white/5 border border-white/10">
@@ -916,6 +1017,200 @@ export default function AdminPage({
                 ))}
               </div>
               <p className="text-xs text-white/40 mt-3">{t('admin.noteMaxRate')}</p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* TokenMiningV3 Tab */}
+        {activeTab === 'token-mining-v3' && isOwner('tokenMiningV3') && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            {/* Current V3 Config */}
+            <div className="neon-card">
+              <div className="neon-card-inner">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <FiActivity className="w-5 h-5 text-[#00D9A5]" />
+                  {t('admin.currentConfig')} - TokenMining V3
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="p-3 rounded-lg bg-white/5">
+                    <div className="text-xs text-white/40 mb-1">{t('admin.totalStaked')}</div>
+                    <div className="text-lg font-bold text-white">{formatNumber(tokenV3Status?.totalStaked)} AGG</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-white/5">
+                    <div className="text-xs text-white/40 mb-1">{t('admin.distributed')}</div>
+                    <div className="text-lg font-bold text-white">{formatNumber(tokenV3Status?.totalDistributed)} AGG</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-white/5">
+                    <div className="text-xs text-white/40 mb-1">{t('admin.remainingRewards')}</div>
+                    <div className="text-lg font-bold text-white">{formatNumber(tokenV3Status?.remainingRewards)} AGG</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-white/5">
+                    <div className="text-xs text-white/40 mb-1">{t('admin.status')}</div>
+                    <div className={`text-lg font-bold ${tokenV3Status?.miningEnded ? 'text-[#FF6B6B]' : 'text-[#00D9A5]'}`}>
+                      {tokenV3Status?.miningEnded ? t('admin.ended') : t('admin.inProgress')}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Current Tier Rates */}
+                <h4 className="text-sm text-white/60 mb-3">{t('admin.tierRates')}</h4>
+                <div className="grid grid-cols-4 gap-3 mb-4">
+                  {[t('admin.flexible'), t('admin.months3'), t('admin.months6'), t('admin.months12')].map((name, i) => (
+                    <div key={i} className="p-3 rounded-lg bg-white/5 text-center">
+                      <div className="text-xs text-white/40 mb-1">{name}</div>
+                      <div className="text-lg font-bold text-[#00D9A5]">{v3TierConfigs?.dailyRates?.[i] || '-'}%</div>
+                      <div className="text-xs text-white/30">{t('admin.daily')}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Current Referral Rates */}
+                <h4 className="text-sm text-white/60 mb-3">{t('admin.referralRatesSetting')}</h4>
+                <div className="flex flex-wrap gap-2">
+                  {currentV3ReferralRates && currentV3ReferralRates.length > 0 ? (
+                    currentV3ReferralRates.map((rate, i) => (
+                      <div key={i} className="px-3 py-2 rounded-lg bg-white/5 text-center">
+                        <div className="text-xs text-white/40">{i + 1}{t('tokenMining.level')}</div>
+                        <div className="text-sm font-bold text-[#00D9A5]">{rate}%</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-white/40">{t('admin.notSet')}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* V3 Total Rewards */}
+            <div className="glass-premium p-6">
+              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                <FiGift className="w-4 h-4 text-[#00D9A5]" />
+                {t('admin.totalRewardsSetting')}
+              </h3>
+              <div className="flex gap-3">
+                <input
+                  type="number"
+                  placeholder={t('admin.totalRewardAmount2')}
+                  value={tokenV3Config.totalRewards}
+                  onChange={(e) => setTokenV3Config(prev => ({ ...prev, totalRewards: e.target.value }))}
+                  className="input-premium flex-1"
+                />
+                <button
+                  onClick={handleSetTotalRewardsV3}
+                  disabled={isUpdating || !tokenV3Config.totalRewards}
+                  className="btn-premium px-6 disabled:opacity-50"
+                >
+                  <FiSave className="w-4 h-4 mr-2" />
+                  {t('admin.save')}
+                </button>
+              </div>
+            </div>
+
+            {/* V3 Tier Configs */}
+            <div className="glass-premium p-6">
+              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                <FiPercent className="w-4 h-4 text-[#00D9A5]" />
+                {t('admin.tierRateSetting')}
+              </h3>
+              <div className="space-y-3">
+                {[
+                  { tier: 0, name: t('admin.flexibleLock'), placeholder: `${t('admin.eg')} 0.4` },
+                  { tier: 1, name: t('admin.months3Lock'), placeholder: `${t('admin.eg')} 0.6` },
+                  { tier: 2, name: t('admin.months6Lock'), placeholder: `${t('admin.eg')} 0.8` },
+                  { tier: 3, name: t('admin.months12Lock'), placeholder: `${t('admin.eg')} 1.0` },
+                ].map(({ tier, name, placeholder }) => (
+                  <div key={tier} className="flex gap-3 items-center">
+                    <span className="text-white/60 w-24 text-sm">{name}</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      placeholder={placeholder}
+                      value={tokenV3Config[`tier${tier}Rate`]}
+                      onChange={(e) => setTokenV3Config(prev => ({ ...prev, [`tier${tier}Rate`]: e.target.value }))}
+                      className="input-premium flex-1"
+                    />
+                    <button
+                      onClick={() => handleSetTierConfigV3(tier)}
+                      disabled={isUpdating || !tokenV3Config[`tier${tier}Rate`]}
+                      className="btn-ghost px-4 disabled:opacity-50"
+                    >
+                      {t('admin.save')}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* V3 Referral Rates - Dynamic 1-20 levels */}
+            <div className="glass-premium p-6">
+              <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                <FiUsers className="w-4 h-4 text-[#00D9A5]" />
+                {t('admin.referralRatesSetting')} (1-20{t('tokenMining.level')})
+              </h3>
+              <p className="text-xs text-white/50 mb-4">
+                {t('admin.referralRatesV3Desc')}
+              </p>
+
+              {/* Dynamic rate inputs */}
+              <div className="space-y-3 mb-4">
+                {tokenV3Config.referralRates.map((rate, i) => (
+                  <div key={i} className="flex gap-3 items-center">
+                    <span className="text-white/60 w-16 text-sm">{i + 1}{t('tokenMining.level')}</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      placeholder={`${t('admin.eg')} ${Math.max(10 - i, 1)}`}
+                      value={rate}
+                      onChange={(e) => {
+                        const newRates = [...tokenV3Config.referralRates];
+                        newRates[i] = e.target.value;
+                        setTokenV3Config(prev => ({ ...prev, referralRates: newRates }));
+                      }}
+                      className="input-premium flex-1"
+                    />
+                    <span className="text-white/40 text-sm">%</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add/Remove level buttons */}
+              <div className="flex gap-3 mb-4">
+                <button
+                  onClick={addReferralLevel}
+                  disabled={tokenV3Config.referralRates.length >= 20}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00D9A5]/20 text-[#00D9A5] text-sm font-medium hover:bg-[#00D9A5]/30 transition-colors disabled:opacity-50"
+                >
+                  <FiPlus className="w-4 h-4" />
+                  {t('admin.addLevel')}
+                </button>
+                <button
+                  onClick={removeReferralLevel}
+                  disabled={tokenV3Config.referralRates.length <= 1}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#FF6B6B]/20 text-[#FF6B6B] text-sm font-medium hover:bg-[#FF6B6B]/30 transition-colors disabled:opacity-50"
+                >
+                  <FiMinus className="w-4 h-4" />
+                  {t('admin.removeLevel')}
+                </button>
+                <span className="text-white/40 text-sm self-center">
+                  ({tokenV3Config.referralRates.length}/20 {t('tokenMining.level')})
+                </span>
+              </div>
+
+              <button
+                onClick={handleSetReferralRatesV3}
+                disabled={isUpdating || !tokenV3Config.referralRates.some(r => r !== '' && r !== undefined)}
+                className="btn-premium w-full disabled:opacity-50"
+              >
+                <FiSave className="w-4 h-4 mr-2" />
+                {t('admin.saveReferralRates')}
+              </button>
+              <p className="text-xs text-white/40 mt-2">
+                {t('admin.referralRatesV3Note')}
+              </p>
             </div>
           </motion.div>
         )}

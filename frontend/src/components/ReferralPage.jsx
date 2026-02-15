@@ -9,6 +9,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 export default function ReferralPage({
   account,
   lpMiningData,
+  tokenMiningV3Data,
   contracts,
   onRefresh
 }) {
@@ -224,9 +225,10 @@ export default function ReferralPage({
     }
   };
 
-  // 设置推荐人
+  // 设置推荐人（同时绑定 LP Mining 和 Token Mining V3）
   const handleSetReferrer = async () => {
-    if (!contracts?.lpMining || !referrerAddress) return;
+    if (!referrerAddress) return;
+    if (!contracts?.lpMining && !contracts?.tokenMiningV3) return;
 
     if (!ethers.isAddress(referrerAddress)) {
       toast.error(t('toast.invalidAddress'));
@@ -235,10 +237,53 @@ export default function ReferralPage({
 
     setIsSettingReferrer(true);
     try {
-      const tx = await contracts.lpMining.setReferrer(referrerAddress);
-      toast.loading(t('toast.settingReferrer'), { id: 'setReferrer' });
-      await tx.wait();
-      toast.success(t('toast.setReferrerSuccess'), { id: 'setReferrer' });
+      const bindPromises = [];
+
+      // LP Mining 绑定
+      if (contracts?.lpMining) {
+        try {
+          const hasRef = await contracts.lpMining.hasReferrer(account);
+          if (!hasRef) {
+            bindPromises.push(
+              contracts.lpMining.setReferrer(referrerAddress)
+                .then(tx => tx.wait())
+                .then(() => ({ contract: 'LP Mining', success: true }))
+                .catch(err => ({ contract: 'LP Mining', success: false, error: err }))
+            );
+          }
+        } catch {}
+      }
+
+      // Token Mining V3 绑定
+      if (contracts?.tokenMiningV3) {
+        try {
+          const hasRef = await contracts.tokenMiningV3.hasReferrer(account);
+          if (!hasRef) {
+            bindPromises.push(
+              contracts.tokenMiningV3.setReferrer(referrerAddress)
+                .then(tx => tx.wait())
+                .then(() => ({ contract: 'Token Mining V3', success: true }))
+                .catch(err => ({ contract: 'Token Mining V3', success: false, error: err }))
+            );
+          }
+        } catch {}
+      }
+
+      if (bindPromises.length === 0) {
+        toast.success(t('toast.bindSuccess'));
+      } else {
+        toast.loading(t('toast.settingReferrer'), { id: 'setReferrer' });
+        const results = await Promise.allSettled(bindPromises);
+        const resolvedResults = results.map(r => r.status === 'fulfilled' ? r.value : { success: false });
+        const anySuccess = resolvedResults.some(r => r.success);
+
+        if (anySuccess) {
+          toast.success(t('toast.setReferrerSuccess'), { id: 'setReferrer' });
+        } else {
+          toast.error(t('toast.bindFailed'), { id: 'setReferrer' });
+        }
+      }
+
       setReferrerAddress('');
       onRefresh?.();
     } catch (err) {
@@ -283,6 +328,9 @@ export default function ReferralPage({
   };
 
   const hasReferrer = userInfo?.referrer && userInfo.referrer !== ethers.ZeroAddress;
+  const v3HasReferrer = tokenMiningV3Data?.userInfo?.referrer && tokenMiningV3Data.userInfo.referrer !== ethers.ZeroAddress;
+  const hasAnyReferrer = hasReferrer || v3HasReferrer;
+  const displayedReferrer = hasReferrer ? userInfo.referrer : (v3HasReferrer ? tokenMiningV3Data.userInfo.referrer : null);
 
   return (
     <div className="space-y-8">
@@ -338,7 +386,7 @@ export default function ReferralPage({
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: t('referral.directReferrals'), value: userInfo?.referralCount || 0, suffix: t('referral.person'), icon: <FiUserPlus className="w-5 h-5" />, color: 'primary' },
+          { label: t('referral.directReferrals'), value: (userInfo?.referralCount || 0) + (tokenMiningV3Data?.userInfo?.directReferrals || 0) > 0 ? Math.max(userInfo?.referralCount || 0, tokenMiningV3Data?.userInfo?.directReferrals || 0) : 0, suffix: t('referral.person'), icon: <FiUserPlus className="w-5 h-5" />, color: 'primary' },
           { label: t('referral.teamPerformance'), value: userInfo?.teamPerformance, suffix: 'LP', icon: <FiLayers className="w-5 h-5" />, color: 'gold' },
           { label: t('referral.smallAreaPerformance'), value: userInfo?.smallAreaPerformance, suffix: 'LP', icon: <FiTarget className="w-5 h-5" />, color: 'primary' },
           { label: t('referral.teamLevel'), value: `${userInfo?.teamLevel || 0} ${t('referral.level')}`, suffix: '', icon: <FiAward className="w-5 h-5" />, color: 'gold', highlight: true },
@@ -378,16 +426,16 @@ export default function ReferralPage({
               {t('referral.myReferrer')}
             </h2>
 
-            {hasReferrer ? (
+            {hasAnyReferrer ? (
               <div className="p-4 rounded-xl mb-6 bg-white/5 border border-white/5">
                 <div className="text-white/50 text-sm mb-2">{t('referral.referrerAddress')}</div>
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-lg text-white">{formatAddress(userInfo.referrer)}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-lg text-white truncate min-w-0">{formatAddress(displayedReferrer)}</span>
                   <a
-                    href={`https://testnet.bscscan.com/address/${userInfo.referrer}`}
+                    href={`https://bscscan.com/address/${displayedReferrer}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[#00D9A5] hover:text-[#00FFB8] transition-colors"
+                    className="flex items-center gap-1 text-[#00D9A5] hover:text-[#00FFB8] transition-colors flex-shrink-0"
                   >
                     <FiExternalLink className="w-4 h-4" />
                     <span className="text-sm">{t('referral.view')}</span>
@@ -415,7 +463,7 @@ export default function ReferralPage({
                     value={referrerAddress}
                     onChange={(e) => setReferrerAddress(e.target.value)}
                     placeholder={t('referral.enterReferrerAddress')}
-                    className="input-premium font-mono text-sm"
+                    className="input-premium font-mono text-sm w-full overflow-hidden"
                   />
                   <motion.button
                     whileHover={{ scale: 1.02 }}
@@ -689,7 +737,7 @@ export default function ReferralPage({
                       )}
                     </div>
                     <a
-                      href={`https://testnet.bscscan.com/address/${member.address}`}
+                      href={`https://bscscan.com/address/${member.address}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 text-[#00D9A5] hover:text-[#00FFB8] transition-colors"
@@ -745,7 +793,7 @@ export default function ReferralPage({
                                   )}
                                 </div>
                                 <a
-                                  href={`https://testnet.bscscan.com/address/${sub.address}`}
+                                  href={`https://bscscan.com/address/${sub.address}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="flex items-center gap-1 text-[#FFB800] hover:text-[#FFCC00] transition-colors"
@@ -780,7 +828,7 @@ export default function ReferralPage({
                                           <span className="font-mono text-white/60 text-sm">{formatAddress(l3.address)}</span>
                                         </div>
                                         <a
-                                          href={`https://testnet.bscscan.com/address/${l3.address}`}
+                                          href={`https://bscscan.com/address/${l3.address}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           className="flex items-center gap-1 text-[#FF6B6B] hover:text-[#FF8A8A] transition-colors"
@@ -823,7 +871,7 @@ export default function ReferralPage({
                   </div>
                 </div>
                 <a
-                  href={`https://testnet.bscscan.com/address/${member.address}`}
+                  href={`https://bscscan.com/address/${member.address}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[#FFB800] hover:text-[#FFCC00] transition-colors"
@@ -855,7 +903,7 @@ export default function ReferralPage({
                   </div>
                 </div>
                 <a
-                  href={`https://testnet.bscscan.com/address/${member.address}`}
+                  href={`https://bscscan.com/address/${member.address}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[#FF6B6B] hover:text-[#FF8A8A] transition-colors"
