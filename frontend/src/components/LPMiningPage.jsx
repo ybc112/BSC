@@ -42,6 +42,8 @@ export default function LPMiningPage({
   const [isTransferringLP, setIsTransferringLP] = useState(false);
   const [now, setNow] = useState(Math.floor(Date.now() / 1000));
 
+  const { userInfo, miningStatus, pendingReward, teamConfig, contractConfig, lockStatus, isOwner } = lpMiningData || {};
+
   // 实时更新时间用于锁定倒计时
   useEffect(() => {
     if (!lockStatus?.isLocked) return;
@@ -50,8 +52,6 @@ export default function LPMiningPage({
     }, 1000);
     return () => clearInterval(timer);
   }, [lockStatus?.isLocked]);
-
-  const { userInfo, miningStatus, pendingReward, teamConfig, contractConfig, lockStatus, isOwner } = lpMiningData || {};
 
   const needsApproval = parseFloat(lpAllowance) < parseFloat(depositAmount || '0');
 
