@@ -235,6 +235,11 @@ export default function ReferralPage({
       return;
     }
 
+    if (referrerAddress.toLowerCase() === account?.toLowerCase()) {
+      toast.error(t('toast.cannotReferSelf'));
+      return;
+    }
+
     setIsSettingReferrer(true);
     try {
       const bindPromises = [];
@@ -360,13 +365,13 @@ export default function ReferralPage({
         >
           <div className="absolute inset-0 bg-gradient-to-r from-[#00D9A5]/10 via-[#FFB800]/10 to-[#00D9A5]/10" />
           <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%220.02%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]" />
-          <div className="relative p-8">
+          <div className="relative p-4 sm:p-8">
             <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#00D9A5] to-[#FFB800] flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#00D9A5]/30">
-                <FiShare2 className="w-10 h-10 text-[#0B1120]" />
+              <div className="w-16 sm:w-20 h-16 sm:h-20 rounded-2xl bg-gradient-to-br from-[#00D9A5] to-[#FFB800] flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#00D9A5]/30">
+                <FiShare2 className="w-8 sm:w-10 h-8 sm:h-10 text-[#0B1120]" />
               </div>
               <div className="flex-1 text-center md:text-left">
-                <h2 className="text-2xl font-bold mb-2 text-white">{t('referral.myReferralLink')}</h2>
+                <h2 className="text-xl sm:text-2xl font-bold mb-2 text-white">{t('referral.myReferralLink')}</h2>
                 <p className="text-white/50">{t('referral.shareLinkDesc')}</p>
               </div>
               <motion.button
@@ -402,9 +407,9 @@ export default function ReferralPage({
               {stat.icon}
               <span className="text-white/40 text-sm">{stat.label}</span>
             </div>
-            <div className={`text-2xl font-bold ${stat.highlight ? 'text-gradient-gold' : 'text-white'}`}>
+            <div className={`text-lg sm:text-2xl font-bold ${stat.highlight ? 'text-gradient-gold' : 'text-white'}`}>
               {typeof stat.value === 'string' ? stat.value : formatNumber(stat.value)}
-              {stat.suffix && <span className="text-white/40 text-sm ml-1">{stat.suffix}</span>}
+              {stat.suffix && <span className="text-white/40 text-xs sm:text-sm ml-1">{stat.suffix}</span>}
             </div>
           </motion.div>
         ))}
@@ -486,11 +491,11 @@ export default function ReferralPage({
               <FiGift className="text-[#00D9A5]" /> {t('referral.referralReward')}
             </h3>
 
-            <div className="relative p-6 rounded-2xl mb-4 overflow-hidden bg-gradient-to-br from-[#1A2332] to-[#111827] border border-white/5">
+            <div className="relative p-4 sm:p-6 rounded-2xl mb-4 overflow-hidden bg-gradient-to-br from-[#1A2332] to-[#111827] border border-white/5">
               <div className="absolute inset-0 bg-gradient-to-br from-[#00D9A5]/5 to-[#FFB800]/5" />
               <div className="relative text-center">
                 <div className="text-white/50 text-sm mb-2">{t('referral.pendingReferralReward')}</div>
-                <div className="text-4xl font-bold text-gradient-premium mb-1">
+                <div className="text-3xl sm:text-4xl font-bold text-gradient-premium mb-1">
                   {formatNumber(userInfo?.referralRewards, 4)}
                 </div>
                 <div className="text-white/40">AGG</div>
@@ -576,11 +581,11 @@ export default function ReferralPage({
             </div>
 
             {/* Team Rewards Claim */}
-            <div className="relative p-6 rounded-2xl mb-4 overflow-hidden bg-gradient-to-br from-[#1A2332] to-[#111827] border border-white/5">
+            <div className="relative p-4 sm:p-6 rounded-2xl mb-4 overflow-hidden bg-gradient-to-br from-[#1A2332] to-[#111827] border border-white/5">
               <div className="absolute inset-0 bg-gradient-to-br from-[#FFB800]/5 to-[#FF8A00]/5" />
               <div className="relative text-center">
                 <div className="text-white/50 text-sm mb-2">{t('referral.pendingTeamReward')}</div>
-                <div className="text-4xl font-bold text-gradient-gold mb-1">
+                <div className="text-3xl sm:text-4xl font-bold text-gradient-gold mb-1">
                   {formatNumber(userInfo?.teamRewards, 4)}
                 </div>
                 <div className="text-white/40">AGG</div>
@@ -608,7 +613,7 @@ export default function ReferralPage({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-premium p-6"
+        className="glass-premium p-4 sm:p-6"
       >
         {/* Header with Stats */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -657,30 +662,30 @@ export default function ReferralPage({
         </div>
 
         {/* Level Stats Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="p-4 rounded-xl bg-gradient-to-br from-[#00D9A5]/10 to-[#00D9A5]/5 border border-[#00D9A5]/20">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-r from-[#00D9A5] to-[#00B88A] flex items-center justify-center text-[#0B1120] text-xs font-bold">1</div>
-              <span className="text-white/60 text-sm">{t('referral.level1Members')}</span>
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+          <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-[#00D9A5]/10 to-[#00D9A5]/5 border border-[#00D9A5]/20">
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
+              <div className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gradient-to-r from-[#00D9A5] to-[#00B88A] flex items-center justify-center text-[#0B1120] text-xs font-bold">1</div>
+              <span className="text-white/60 text-xs sm:text-sm">{t('referral.level1Members')}</span>
             </div>
-            <div className="text-2xl font-bold text-[#00D9A5]">{teamStats.level1}</div>
-            <div className="text-xs text-white/40">{t('referral.level1Rate')}</div>
+            <div className="text-xl sm:text-2xl font-bold text-[#00D9A5]">{teamStats.level1}</div>
+            <div className="text-xs text-white/40 hidden sm:block">{t('referral.level1Rate')}</div>
           </div>
-          <div className="p-4 rounded-xl bg-gradient-to-br from-[#FFB800]/10 to-[#FFB800]/5 border border-[#FFB800]/20">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-r from-[#FFB800] to-[#FF8A00] flex items-center justify-center text-[#0B1120] text-xs font-bold">2</div>
-              <span className="text-white/60 text-sm">{t('referral.level2Members')}</span>
+          <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-[#FFB800]/10 to-[#FFB800]/5 border border-[#FFB800]/20">
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
+              <div className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gradient-to-r from-[#FFB800] to-[#FF8A00] flex items-center justify-center text-[#0B1120] text-xs font-bold">2</div>
+              <span className="text-white/60 text-xs sm:text-sm">{t('referral.level2Members')}</span>
             </div>
-            <div className="text-2xl font-bold text-[#FFB800]">{teamStats.level2}</div>
-            <div className="text-xs text-white/40">{t('referral.level2Rate')}</div>
+            <div className="text-xl sm:text-2xl font-bold text-[#FFB800]">{teamStats.level2}</div>
+            <div className="text-xs text-white/40 hidden sm:block">{t('referral.level2Rate')}</div>
           </div>
-          <div className="p-4 rounded-xl bg-gradient-to-br from-[#FF6B6B]/10 to-[#FF6B6B]/5 border border-[#FF6B6B]/20">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-r from-[#FF6B6B] to-[#FF8A00] flex items-center justify-center text-[#0B1120] text-xs font-bold">3</div>
-              <span className="text-white/60 text-sm">{t('referral.level3Members')}</span>
+          <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-[#FF6B6B]/10 to-[#FF6B6B]/5 border border-[#FF6B6B]/20">
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
+              <div className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gradient-to-r from-[#FF6B6B] to-[#FF8A00] flex items-center justify-center text-[#0B1120] text-xs font-bold">3</div>
+              <span className="text-white/60 text-xs sm:text-sm">{t('referral.level3Members')}</span>
             </div>
-            <div className="text-2xl font-bold text-[#FF6B6B]">{teamStats.level3}</div>
-            <div className="text-xs text-white/40">{t('referral.level3Rate')}</div>
+            <div className="text-xl sm:text-2xl font-bold text-[#FF6B6B]">{teamStats.level3}</div>
+            <div className="text-xs text-white/40 hidden sm:block">{t('referral.level3Rate')}</div>
           </div>
         </div>
 
@@ -755,7 +760,7 @@ export default function ReferralPage({
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="pl-8 space-y-2"
+                        className="pl-4 sm:pl-8 space-y-2"
                       >
                         {subMembers.map((sub, subIndex) => {
                           const level3Members = getSubMembers(sub.address, 2);
@@ -810,7 +815,7 @@ export default function ReferralPage({
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: 'auto' }}
                                     exit={{ opacity: 0, height: 0 }}
-                                    className="pl-8 space-y-2"
+                                    className="pl-4 sm:pl-8 space-y-2"
                                   >
                                     {level3Members.map((l3, l3Index) => (
                                       <motion.div

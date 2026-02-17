@@ -81,12 +81,12 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
   };
 
   return (
-    <div className="space-y-16">
+    <div className="space-y-8 md:space-y-16">
       {/* Hero Section */}
-      <section className="relative pt-8 pb-12">
+      <section className="relative pt-4 md:pt-8 pb-8 md:pb-12">
         {/* 装饰性光球 */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#00D9A5]/10 rounded-full blur-[120px] animate-float" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-[#FFB800]/10 rounded-full blur-[100px] animate-float" style={{ animationDelay: '3s' }} />
+        <div className="absolute top-0 left-1/4 w-48 md:w-96 h-48 md:h-96 bg-[#00D9A5]/10 rounded-full blur-[80px] md:blur-[120px] animate-float" />
+        <div className="absolute bottom-0 right-1/4 w-40 md:w-80 h-40 md:h-80 bg-[#FFB800]/10 rounded-full blur-[60px] md:blur-[100px] animate-float" style={{ animationDelay: '3s' }} />
 
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -108,14 +108,14 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
           </motion.div>
 
           {/* Main Title */}
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold mb-4 md:mb-6 leading-tight">
             <span className="text-white">{t('home.title1')}</span>
             <br />
             <span className="text-gradient-premium text-glow">{t('home.title2')}</span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-white/50 max-w-3xl mx-auto mb-10 leading-relaxed">
+          <p className="text-base sm:text-xl md:text-2xl text-white/50 max-w-3xl mx-auto mb-6 md:mb-10 leading-relaxed px-2">
             {t('home.subtitle')}
             <br />
             <span className="text-white/70">{t('home.totalReward')}</span>
@@ -165,7 +165,7 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
                 <div className={`w-2 h-2 rounded-full ${stat.color === 'primary' ? 'bg-[#00D9A5]' : 'bg-[#FFB800]'} animate-pulse`} />
               </div>
               <div className="number-display">
-                <span className="text-3xl md:text-4xl font-bold text-white">
+                <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">
                   {formatNumber(stat.value)}
                 </span>
                 <span className="text-white/40 text-sm ml-2">{stat.suffix}</span>
@@ -183,7 +183,7 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
           animate={{ opacity: 1 }}
           className="text-center mb-12"
         >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 text-white">
             {t('home.chooseMethod')}<span className="text-gradient-premium">{t('home.miningMethod')}</span>
           </h2>
           <p className="text-white/50">{t('home.moreChannels')}</p>
@@ -203,7 +203,7 @@ export default function HomePage({ onPageChange, lpMiningData, tokenMiningV2Data
               }}
             >
               {/* 内部卡片 */}
-              <div className="relative rounded-2xl p-6 bg-[#0F1629] h-full overflow-hidden transition-all duration-300 group-hover:bg-[#131B2E]">
+              <div className="relative rounded-2xl p-4 sm:p-6 bg-[#0F1629] h-full overflow-hidden transition-all duration-300 group-hover:bg-[#131B2E]">
                 {/* 背景光效 */}
                 <div className={`absolute top-0 right-0 w-40 h-40 rounded-full bg-gradient-to-br ${feature.color} opacity-5 blur-3xl group-hover:opacity-10 transition-opacity`} />
 

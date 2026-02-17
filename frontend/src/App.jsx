@@ -342,12 +342,12 @@ function App() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#0B1120]/95 p-6 shadow-2xl"
+              className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#0B1120]/95 p-4 sm:p-6 shadow-2xl"
             >
               {/* Header */}
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#00D9A5] to-[#00B88A] flex items-center justify-center">
-                  <FiUserPlus className="w-7 h-7 text-[#0B1120]" />
+              <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="w-12 sm:w-14 h-12 sm:h-14 rounded-2xl bg-gradient-to-br from-[#00D9A5] to-[#00B88A] flex items-center justify-center">
+                  <FiUserPlus className="w-6 sm:w-7 h-6 sm:h-7 text-[#0B1120]" />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-white">{t('app.bindReferrer')}</h3>
@@ -405,7 +405,8 @@ function App() {
 
       {/* Toast Notifications */}
       <Toaster
-        position="top-right"
+        position="top-center"
+        containerStyle={{ top: 70 }}
         toastOptions={{
           duration: 4000,
           style: {
@@ -414,6 +415,8 @@ function App() {
             border: '1px solid rgba(0, 217, 165, 0.2)',
             backdropFilter: 'blur(10px)',
             borderRadius: '12px',
+            fontSize: '14px',
+            maxWidth: '90vw',
             fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif',
           },
           success: {
@@ -444,16 +447,16 @@ function App() {
       />
 
       {/* Main Content */}
-      <main className="min-h-screen pt-24 md:pt-28 pb-12 px-4 sm:px-6 lg:px-8">
+      <main className="min-h-screen pt-20 md:pt-28 pb-8 md:pb-12 px-3 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {renderPage()}
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="glass border-t border-white/5 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+      <footer className="glass border-t border-white/5 py-6 md:py-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00D9A5] to-[#00B88A] flex items-center justify-center">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

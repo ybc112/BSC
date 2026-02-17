@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
@@ -40,13 +40,27 @@ export default function LPMiningPage({
   });
   const [isUpdating, setIsUpdating] = useState(false);
   const [isTransferringLP, setIsTransferringLP] = useState(false);
+  const [now, setNow] = useState(Math.floor(Date.now() / 1000));
+
+  // 实时更新时间用于锁定倒计时
+  useEffect(() => {
+    if (!lockStatus?.isLocked) return;
+    const timer = setInterval(() => {
+      setNow(Math.floor(Date.now() / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lockStatus?.isLocked]);
 
   const { userInfo, miningStatus, pendingReward, teamConfig, contractConfig, lockStatus, isOwner } = lpMiningData || {};
 
   const needsApproval = parseFloat(lpAllowance) < parseFloat(depositAmount || '0');
 
-  // 格式化锁仓剩余时间
+  // 格式化锁仓剩余时间（实时计算）
   const formatLockTime = (seconds) => {
+    // 优先使用 unlockTime 实时计算
+    if (lockStatus?.unlockTime) {
+      seconds = Math.max(lockStatus.unlockTime - now, 0);
+    }
     if (!seconds || seconds <= 0) return t('lpMining.unlocked');
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
@@ -76,6 +90,15 @@ export default function LPMiningPage({
   // 质押
   const handleDeposit = async () => {
     if (!contracts?.lpMining || !depositAmount) return;
+    const num = parseFloat(depositAmount);
+    if (isNaN(num) || num <= 0) {
+      toast.error(t('toast.invalidAmount') || '请输入有效金额');
+      return;
+    }
+    if (num > parseFloat(lpBalance || '0')) {
+      toast.error(t('toast.insufficientBalance') || '余额不足');
+      return;
+    }
     setIsDepositing(true);
     try {
       const amount = ethers.parseEther(depositAmount);
@@ -95,6 +118,15 @@ export default function LPMiningPage({
   // 解押
   const handleWithdraw = async () => {
     if (!contracts?.lpMining || !withdrawAmount) return;
+    const num = parseFloat(withdrawAmount);
+    if (isNaN(num) || num <= 0) {
+      toast.error(t('toast.invalidAmount') || '请输入有效金额');
+      return;
+    }
+    if (num > parseFloat(userInfo?.stakedAmount || '0')) {
+      toast.error(t('toast.exceedsStaked') || '超过已质押金额');
+      return;
+    }
     setIsWithdrawing(true);
     try {
       const amount = ethers.parseEther(withdrawAmount);
@@ -300,9 +332,9 @@ export default function LPMiningPage({
               {stat.icon}
               <span className="text-white/40 text-sm">{stat.label}</span>
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-lg sm:text-2xl font-bold text-white">
               {stat.isTime ? stat.value : formatNumber(stat.value)}
-              {stat.suffix && <span className="text-white/40 text-sm ml-1">{stat.suffix}</span>}
+              {stat.suffix && <span className="text-white/40 text-xs sm:text-sm ml-1">{stat.suffix}</span>}
             </div>
           </motion.div>
         ))}
@@ -463,11 +495,11 @@ export default function LPMiningPage({
             </h2>
 
             {/* Pending Reward - 显示用户实际到手金额 */}
-            <div className="relative p-6 rounded-2xl mb-6 overflow-hidden bg-gradient-to-br from-[#1A2332] to-[#111827] border border-white/5">
+            <div className="relative p-4 sm:p-6 rounded-2xl mb-6 overflow-hidden bg-gradient-to-br from-[#1A2332] to-[#111827] border border-white/5">
               <div className="absolute inset-0 bg-gradient-to-br from-[#00D9A5]/5 to-[#FFB800]/5" />
               <div className="relative text-center">
                 <div className="text-white/50 text-sm mb-2">{t('lpMining.pendingRewards')}</div>
-                <div className="text-4xl md:text-5xl font-bold text-gradient-premium mb-1">
+                <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-gradient-premium mb-1 break-all">
                   {formatNumber(parseFloat(pendingReward || 0) * (contractConfig?.userBaseShare || 65) / 100, 4)}
                 </div>
                 <div className="text-white/40">AGG</div>
@@ -578,7 +610,7 @@ export default function LPMiningPage({
             {/* Contract Config Info */}
             <div className="space-y-4">
               <h4 className="font-semibold text-white">{t('lpMining.currentConfig')}</h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                 {[
                   { label: t('lpMining.totalRewards'), value: `${formatNumber(contractConfig?.totalRewards)} AGG` },
                   { label: t('lpMining.miningPeriod'), value: `${(contractConfig?.miningDurationDays / 365).toFixed(1)} ${t('lpMining.year')}` },
@@ -595,7 +627,7 @@ export default function LPMiningPage({
             {/* My Team Info */}
             <div className="space-y-4">
               <h4 className="font-semibold text-white">{t('lpMining.myTeamInfo')}</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 {[
                   { label: t('lpMining.directReferrals'), value: userInfo?.referralCount || 0 },
                   { label: t('lpMining.teamPerformance'), value: `${formatNumber(userInfo?.teamPerformance)} LP` },
@@ -663,7 +695,7 @@ export default function LPMiningPage({
               {/* 挖矿参数设置 */}
               <div className="space-y-3">
                 <h4 className="font-semibold text-white">{t('lpMining.miningParams')}</h4>
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <input
                     type="number"
                     value={adminConfig.totalRewards}
@@ -693,7 +725,7 @@ export default function LPMiningPage({
               {/* 分配比例设置 */}
               <div className="space-y-3">
                 <h4 className="font-semibold text-white">{t('lpMining.distributionRates')}（{t('lpMining.distributionRatesDesc')}）</h4>
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <input
                     type="number"
                     value={adminConfig.userShare}
@@ -723,7 +755,7 @@ export default function LPMiningPage({
               {/* 推荐比例设置 */}
               <div className="space-y-3">
                 <h4 className="font-semibold text-white">{t('lpMining.referralRatesSetting')}</h4>
-                <div className="grid md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <input
                     type="number"
                     value={adminConfig.ref1}
@@ -771,7 +803,7 @@ export default function LPMiningPage({
                     </p>
                   </div>
                 </div>
-                <div className="grid md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <input
                     type="text"
                     value={adminConfig.transferTo}

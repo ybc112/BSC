@@ -538,4 +538,40 @@ body {
   .feature-card:hover {
     transform: translateY(-4px);
   }
+
+  .neon-card-inner {
+    @apply p-4;
+  }
+
+  .stat-card-premium {
+    @apply p-3;
+  }
+
+  .btn-premium {
+    @apply px-5 py-3 text-sm;
+  }
+
+  .btn-ghost {
+    @apply px-5 py-3 text-sm;
+  }
+
+  .input-premium {
+    @apply px-4 py-3 text-sm;
+  }
+
+  .feature-card {
+    @apply p-4;
+  }
+
+  .glass-premium {
+    @apply rounded-xl;
+  }
+
+  .neon-card {
+    @apply rounded-2xl;
+  }
+
+  .neon-card-inner {
+    @apply rounded-2xl;
+  }
 }

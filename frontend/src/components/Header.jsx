@@ -17,7 +17,7 @@ function Logo({ onClick }) {
         <img 
           src="/agg-logo.png" 
           alt="AGG" 
-          className="w-11 h-11 rounded-xl shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-shadow"
+          className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-shadow"
         />
         {/* 装饰性光环 */}
         <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-400 opacity-0 group-hover:opacity-20 blur-xl transition-opacity" />
@@ -57,8 +57,8 @@ export default function Header({ account, isConnecting, isCorrectNetwork, onConn
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       <div className="glass border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-20">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 md:h-20">
             {/* Logo */}
             <Logo onClick={() => onPageChange('home')} />
 
@@ -106,7 +106,7 @@ export default function Header({ account, isConnecting, isCorrectNetwork, onConn
                     <div className="w-2 h-2 rounded-full bg-[#00D9A5] animate-pulse" />
                     <span className="text-sm font-medium text-white/90">{formatAddress(account)}</span>
                     <a
-                      href={`https://testnet.bscscan.com/address/${account}`}
+                      href={`https://bscscan.com/address/${account}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-white/40 hover:text-[#00D9A5] transition-colors"

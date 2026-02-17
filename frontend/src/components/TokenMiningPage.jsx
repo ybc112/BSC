@@ -144,6 +144,15 @@ export default function TokenMiningPage({
   // V3 质押
   const handleDeposit = async () => {
     if (!contracts?.tokenMiningV3 || !depositAmount) return;
+    const num = parseFloat(depositAmount);
+    if (isNaN(num) || num <= 0) {
+      toast.error(t('toast.invalidAmount') || '请输入有效金额');
+      return;
+    }
+    if (num > parseFloat(tokenBalance || '0')) {
+      toast.error(t('toast.insufficientBalance') || '余额不足');
+      return;
+    }
     setIsDepositing(true);
     try {
       const amount = ethers.parseEther(depositAmount);
@@ -451,7 +460,7 @@ export default function TokenMiningPage({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setSelectedTier(tier.id)}
-              className={`relative p-5 rounded-2xl border transition-all duration-300 text-left ${
+              className={`relative p-3 sm:p-5 rounded-2xl border transition-all duration-300 text-left ${
                 selectedTier === tier.id
                   ? 'bg-white/10 border-white/30 shadow-lg'
                   : 'bg-white/5 border-white/10 hover:bg-white/8'
@@ -471,7 +480,7 @@ export default function TokenMiningPage({
                 )}
                 <span className="text-sm text-white/60">{tierNames[tier.id]}</span>
               </div>
-              <div className="text-2xl font-bold mb-1" style={{ color: tier.color }}>
+              <div className="text-xl sm:text-2xl font-bold mb-1" style={{ color: tier.color }}>
                 {tier.apy}%
               </div>
               <div className="text-xs text-white/40">
@@ -505,9 +514,9 @@ export default function TokenMiningPage({
                 {stat.icon}
                 <span className="text-white/40 text-sm">{stat.label}</span>
               </div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-lg sm:text-2xl font-bold text-white">
                 {formatNumber(stat.value)}
-                <span className="text-white/40 text-sm ml-1">{stat.suffix}</span>
+                <span className="text-white/40 text-xs sm:text-sm ml-1">{stat.suffix}</span>
               </div>
             </motion.div>
           ))}
@@ -633,7 +642,7 @@ export default function TokenMiningPage({
                   className="w-full btn-premium disabled:opacity-50"
                   style={{ background: `linear-gradient(135deg, ${currentTier.color}, ${currentTier.color}CC)` }}
                 >
-                  <span>{isDepositing ? t('tokenMining.staking') : `${t('tokenMining.stakeToken')} (${tierNames[selectedTier]})`}</span>
+                  <span>{isDepositing ? t('tokenMining.staking') : v3MiningStatus?.miningEnded ? t('tokenMining.miningEndedTitle') : `${t('tokenMining.stakeToken')} (${tierNames[selectedTier]})`}</span>
                 </motion.button>
               )}
 
@@ -794,7 +803,7 @@ export default function TokenMiningPage({
                     <div className="text-sm text-white/50 mb-2">{t('tokenMining.myReferralLink')}</div>
                     <div className="flex gap-2">
                       <div className="flex-1 p-3 rounded-lg bg-white/5 border border-white/5 text-white/70 text-sm font-mono truncate">
-                        {`${window.location.origin}?ref=${account}`}
+                        {`${window.location.origin}?ref=${formatAddress(account)}`}
                       </div>
                       <motion.button
                         whileHover={{ scale: 1.05 }}
@@ -818,8 +827,8 @@ export default function TokenMiningPage({
                   {hasReferrerBound ? (
                     <div>
                       <div className="text-sm text-white/50 mb-2">{t('tokenMining.referrerBound')}</div>
-                      <div className="p-3 rounded-lg bg-white/5 border border-white/5 font-mono text-white text-sm break-all overflow-hidden">
-                        {v3UserInfo.referrer}
+                      <div className="p-3 rounded-lg bg-white/5 border border-white/5 font-mono text-white text-sm overflow-hidden">
+                        {formatAddress(v3UserInfo.referrer)}
                       </div>
                     </div>
                   ) : (
@@ -839,7 +848,7 @@ export default function TokenMiningPage({
                 {referralRates.length > 0 && (
                   <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                     <div className="text-sm text-white/50 mb-3">{t('tokenMining.referralRates')}</div>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
                       {referralRates.map((rate, i) => (
                         <div key={i} className="text-center p-3 rounded-lg bg-white/5 border border-white/5">
                           <div className="text-xs text-white/40 mb-1">{i + 1}{t('tokenMining.level')}</div>
@@ -882,6 +891,7 @@ export default function TokenMiningPage({
                       {isClaimingReferral ? t('tokenMining.claimingReferral') : t('tokenMining.claimReferralReward')}
                     </motion.button>
                   </div>
+                  <div className="text-xs text-white/40 mt-2">{t('tokenMining.referralRewardHint')}</div>
                 </div>
 
                 {/* Direct Referral List */}
@@ -1021,28 +1031,28 @@ export default function TokenMiningPage({
                     <FiLayers className="w-4 h-4" />
                     <span className="text-sm">{t('tokenMining.v2TotalStaked')}</span>
                   </div>
-                  <div className="text-xl font-bold text-white">{formatNumber(v2MiningStatus?.totalStaked)} AGG</div>
+                  <div className="text-lg sm:text-xl font-bold text-white">{formatNumber(v2MiningStatus?.totalStaked)} AGG</div>
                 </div>
                 <div className="stat-card-premium">
                   <div className="flex items-center gap-2 mb-3 text-white/40">
                     <FiGift className="w-4 h-4" />
                     <span className="text-sm">{t('tokenMining.distributedRewards')}</span>
                   </div>
-                  <div className="text-xl font-bold text-white">{formatNumber(v2MiningStatus?.totalDistributed)} AGG</div>
+                  <div className="text-lg sm:text-xl font-bold text-white">{formatNumber(v2MiningStatus?.totalDistributed)} AGG</div>
                 </div>
                 <div className="stat-card-premium">
                   <div className="flex items-center gap-2 mb-3 text-white/40">
                     <FiLayers className="w-4 h-4" />
                     <span className="text-sm">{t('tokenMining.totalStakedUser')}</span>
                   </div>
-                  <div className="text-xl font-bold text-white">{formatNumber(v2UserInfo?.totalStaked, 4)} AGG</div>
+                  <div className="text-lg sm:text-xl font-bold text-white">{formatNumber(v2UserInfo?.totalStaked, 4)} AGG</div>
                 </div>
                 <div className="stat-card-premium">
                   <div className="flex items-center gap-2 mb-3 text-[#00D9A5]">
                     <FiTrendingUp className="w-4 h-4" />
                     <span className="text-sm text-white/40">{t('tokenMining.v2TotalClaimed')}</span>
                   </div>
-                  <div className="text-xl font-bold text-[#00D9A5]">{formatNumber(v2UserInfo?.totalClaimed, 4)} AGG</div>
+                  <div className="text-lg sm:text-xl font-bold text-[#00D9A5]">{formatNumber(v2UserInfo?.totalClaimed, 4)} AGG</div>
                 </div>
               </div>
 
