@@ -1,11 +1,11 @@
 {
   "network": "bscMainnet",
   "chainId": 56,
-  "lpMiningV2": "0x1c6324F8B919d20e47212BB7b5090829ba063183",
+  "lpMiningV2": "0xb2b45fFb37c6e198d6507EEc12e2392CAb859BE9",
   "rewardToken": "0xCd339aec4797790A8e387eF10035df0000d3a815",
   "lpToken": "0x7552081681410f1828a02cfeb865ea444fb21909",
-  "startTime": 1770609443,
-  "deployedAt": "2026-02-09T03:56:35.643Z",
+  "startTime": 1771294615,
+  "deployedAt": "2026-02-17T02:16:05.088Z",
   "deployer": "0xbe4aE94cb80780917132c4779d8bEa4E6804d792",
   "finalOwner": "0x4277EF1F274D6146229D2501F2e2A6ecc26f2789",
   "version": "2.1"

@@ -111,6 +111,7 @@ contract LPMiningV2 is Ownable, ReentrancyGuard {
     // V2.1: 质押用户列表（用于批量发放）
     address[] public stakerList;
     mapping(address => bool) public isStaker;
+    uint256 public activeStakerCount;  // 活跃质押用户数
 
     // 事件
     event Deposit(address indexed user, uint256 amount, uint256 unlockTime);
@@ -225,11 +226,14 @@ contract LPMiningV2 is Ownable, ReentrancyGuard {
         if (!isStaker[msg.sender]) {
             stakerList.push(msg.sender);
             isStaker[msg.sender] = true;
+            activeStakerCount++;
         }
 
-        // 更新锁仓时间（每次质押都会重置锁仓期）
+        // 更新锁仓时间（只在新锁仓时间大于当前时才更新）
         uint256 newUnlockTime = block.timestamp + lockDuration;
-        user.unlockTime = newUnlockTime;
+        if (newUnlockTime > user.unlockTime) {
+            user.unlockTime = newUnlockTime;
+        }
 
         // 更新团队业绩
         _updateTeamPerformance(msg.sender, _amount, true);
@@ -263,6 +267,12 @@ contract LPMiningV2 is Ownable, ReentrancyGuard {
             _updateTeamPerformance(msg.sender, _amount, false);
 
             lpToken.safeTransfer(msg.sender, _amount);
+
+            // 清除活跃质押标记（用户完全退出时）
+            if (user.amount == 0 && isStaker[msg.sender]) {
+                isStaker[msg.sender] = false;
+                activeStakerCount--;
+            }
         }
 
         user.rewardDebt = user.amount * accRewardPerShare / 1e18;
@@ -818,7 +828,7 @@ contract LPMiningV2 is Ownable, ReentrancyGuard {
      * 建议使用事件日志在链下追踪用户
      */
     function getStakerCount() external view returns (uint256) {
-        return stakerList.length;
+        return activeStakerCount;
     }
 
     /**
@@ -1009,7 +1019,7 @@ contract LPMiningV2 is Ownable, ReentrancyGuard {
             rewardPerSecond,
             startTime,
             endTime,
-            totalRewards - totalDistributed,
+            totalRewards > totalDistributed ? totalRewards - totalDistributed : 0,
             miningEnded
         );
     }

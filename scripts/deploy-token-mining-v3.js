@@ -134,7 +134,7 @@ async function main() {
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("💸 [3/4] 充值奖励代币...");
 
-    const aggToken = await hre.ethers.getContractAt("IERC20", CONFIG.AGG_TOKEN);
+    const aggToken = await hre.ethers.getContractAt("@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20", CONFIG.AGG_TOKEN);
     const deployerBalance = await aggToken.balanceOf(deployer.address);
     console.log("   📊 部署者AGG余额:", hre.ethers.formatEther(deployerBalance));
 

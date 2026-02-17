@@ -393,7 +393,7 @@ contract TokenMiningV3 is Ownable, ReentrancyGuard {
      * @dev 计算单笔质押收益
      */
     function _calculateReward(address _user, uint256 _stakeId) internal view returns (uint256) {
-        uint256 remaining = totalRewards - totalDistributed;
+        uint256 remaining = totalRewards > totalDistributed ? totalRewards - totalDistributed : 0;
         return _calculateRewardWithRemaining(_user, _stakeId, remaining);
     }
 
@@ -463,11 +463,24 @@ contract TokenMiningV3 is Ownable, ReentrancyGuard {
         UserInfo storage user = userInfo[_user];
         uint256 totalPending = 0;
 
+        uint256 remaining = totalRewards > totalDistributed ? totalRewards - totalDistributed : 0;
+
         for (uint256 i = 0; i < user.stakeCount; i++) {
             StakeRecord storage record = stakeRecords[_user][i];
             if (record.active && record.amount > 0) {
-                uint256 pending = _calculateReward(_user, i);
-                totalPending += record.pendingRewards + pending;
+                uint256 pending = _calculateRewardWithRemaining(_user, i, remaining);
+                uint256 stakePending = record.pendingRewards + pending;
+
+                if (stakePending > remaining) {
+                    stakePending = remaining;
+                }
+                if (remaining >= stakePending) {
+                    remaining -= stakePending;
+                } else {
+                    remaining = 0;
+                }
+
+                totalPending += stakePending;
             }
         }
 
@@ -613,7 +626,7 @@ contract TokenMiningV3 is Ownable, ReentrancyGuard {
         return (
             totalStaked,
             totalDistributed,
-            totalRewards - totalDistributed,
+            totalRewards > totalDistributed ? totalRewards - totalDistributed : 0,
             miningEnded,
             startTime,
             totalReferralDistributed

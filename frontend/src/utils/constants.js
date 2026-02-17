@@ -1,4 +1,4 @@
-// BSC 主网合约地址 (2026-02-08 更新)
+// BSC 主网合约地址 (2026-02-17 更新)
 export const CONTRACTS = {
   // AGG 代币 (客户部署的版本)
   REWARD_TOKEN: '0xCd339aec4797790A8e387eF10035df0000d3a815',
@@ -8,11 +8,11 @@ export const CONTRACTS = {
   TOKEN_MINING_V2: '0xB4089956A0b775638e8F9F2E17deaE35B102c860',
 
   // TokenMiningV3 (多档锁仓挖矿 + 推荐奖励)
-  TOKEN_MINING_V3: '0x982D6E5a70034d34837BF7c5DACCee8D188c6913',
+  TOKEN_MINING_V3: '0x5AAbbf55E8edE32E1da6Aa9F99C9cb9f69b6C2eD',
 
   // LP 相关
   LP_TOKEN: '0x7552081681410f1828a02cfeb865ea444fb21909',           // PancakeSwap LP Token (AGG/USDT)
-  LP_MINING: '0x1c6324F8B919d20e47212BB7b5090829ba063183',          // LPMiningV2 V2.1 合约地址 (新部署)
+  LP_MINING: '0xb2b45fFb37c6e198d6507EEc12e2392CAb859BE9',          // LPMiningV2 V2.1 合约地址 (Bug修复重部署)
   TOKEN_V2_PAIR: '0x7552081681410f1828a02cfeb865ea444fb21909',      // AGG/USDT 交易对地址
 
   // 空投 Vault (USDT 自动转账)
