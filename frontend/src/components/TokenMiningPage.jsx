@@ -876,7 +876,7 @@ export default function TokenMiningPage({
 
                 {/* Pending Referral Reward + Claim */}
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                     <div>
                       <div className="text-sm text-white/50 mb-1">{t('tokenMining.pendingReferralReward')}</div>
                       <div className="text-2xl font-bold text-[#FFB800]">{formatNumber(v3UserInfo?.referralRewards, 4)} AGG</div>
@@ -886,7 +886,7 @@ export default function TokenMiningPage({
                       whileTap={{ scale: 0.98 }}
                       onClick={handleClaimReferral}
                       disabled={isClaimingReferral || !v3UserInfo?.referralRewards || parseFloat(v3UserInfo?.referralRewards) <= 0}
-                      className="px-4 py-2 rounded-lg bg-[#FFB800]/20 text-[#FFB800] text-sm font-medium hover:bg-[#FFB800]/30 transition-colors disabled:opacity-50"
+                      className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#FFB800]/20 text-[#FFB800] text-sm font-medium hover:bg-[#FFB800]/30 transition-colors disabled:opacity-50"
                     >
                       {isClaimingReferral ? t('tokenMining.claimingReferral') : t('tokenMining.claimReferralReward')}
                     </motion.button>
