@@ -6,6 +6,27 @@ import { FiUsers, FiCopy, FiCheck, FiGift, FiAward, FiShare2, FiUserPlus, FiChev
 import { formatNumber, formatAddress, parseContractError } from '../utils/constants';
 import { useLanguage } from '../contexts/LanguageContext';
 
+const MAX_LEVELS = 15;
+
+// 根据层级返回颜色配置
+function getLevelColor(level) {
+  if (level === 1) return { gradient: 'from-[#00D9A5] to-[#00B88A]', text: 'text-[#00D9A5]', bg: 'bg-[#00D9A5]', border: 'border-[#00D9A5]', hover: 'hover:border-[#00D9A5]/30' };
+  if (level === 2) return { gradient: 'from-[#FFB800] to-[#FF8A00]', text: 'text-[#FFB800]', bg: 'bg-[#FFB800]', border: 'border-[#FFB800]', hover: 'hover:border-[#FFB800]/30' };
+  if (level === 3) return { gradient: 'from-[#FF6B6B] to-[#FF8A00]', text: 'text-[#FF6B6B]', bg: 'bg-[#FF6B6B]', border: 'border-[#FF6B6B]', hover: 'hover:border-[#FF6B6B]/30' };
+  // 4+ 渐变紫色系
+  const hue = 270 + (level - 4) * 10; // 从紫色渐变
+  const color1 = `hsl(${hue}, 70%, 60%)`;
+  const color2 = `hsl(${hue + 20}, 70%, 50%)`;
+  return { gradient: `from-purple-500 to-violet-600`, text: 'text-purple-400', bg: 'bg-purple-500', border: 'border-purple-500', hover: 'hover:border-purple-500/30', custom: { color1, color2 } };
+}
+
+// 根据层级返回每页获取数量
+function getPageSizeForLevel(level) {
+  if (level <= 3) return 10;
+  if (level <= 7) return 5;
+  return 3;
+}
+
 export default function ReferralPage({
   account,
   lpMiningData,
@@ -13,7 +34,7 @@ export default function ReferralPage({
   contracts,
   onRefresh
 }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [referrerAddress, setReferrerAddress] = useState('');
   const [isSettingReferrer, setIsSettingReferrer] = useState(false);
   const [isClaimingReferral, setIsClaimingReferral] = useState(false);
@@ -21,107 +42,104 @@ export default function ReferralPage({
   const [copied, setCopied] = useState(false);
   const [showRules, setShowRules] = useState(false);
 
-  // 多层级团队数据
-  const [teamData, setTeamData] = useState({
-    level1: [], // 1代
-    level2: [], // 2代
-    level3: [], // 3代
-  });
+  // 多层级团队数据 - 15层数组
+  const [teamLevels, setTeamLevels] = useState([]); // Array of arrays, teamLevels[0]=1代, ..., teamLevels[14]=15代
   const [loadingTeam, setLoadingTeam] = useState(false);
-  const [expandedMembers, setExpandedMembers] = useState({}); // 展开状态
-  const [activeLevel, setActiveLevel] = useState('all'); // 当前查看的层级
+  const [loadingProgress, setLoadingProgress] = useState(0); // 已加载层数
+  const [expandedMembers, setExpandedMembers] = useState({});
+  const [activeLevel, setActiveLevel] = useState('all');
 
-  // 分页状态
+  // 分页状态（1代直推分页）
   const [level1Page, setLevel1Page] = useState({ offset: 0, total: 0, hasMore: true });
-  const PAGE_SIZE = 20; // 每页加载数量
+  const PAGE_SIZE = 20;
 
   const { userInfo, referrals, teamConfig } = lpMiningData || {};
 
-  // 使用分页方式获取多层级团队成员
+  // 动态层级名称
+  const getLevelName = (level) => {
+    if (language === 'zh') return `${level}代`;
+    return `L${level}`;
+  };
+
+  // 使用分页方式获取多层级团队成员（前3层自动加载，4+层需展开触发）
   const fetchTeamMembers = useCallback(async (reset = false) => {
     if (!contracts?.lpMining || !account) return;
 
     setLoadingTeam(true);
+    setLoadingProgress(0);
     try {
-      // 使用分页获取1代（直推）
+      const newLevels = [];
+      const batchSize = 5;
+
+      // 获取1代（直推）
       const offset = reset ? 0 : level1Page.offset;
       const { result: level1Members, total } = await contracts.lpMining.getReferralsPaginated(
-        account,
-        offset,
-        PAGE_SIZE
+        account, offset, PAGE_SIZE
       );
 
-      // 更新分页状态
       const newOffset = offset + level1Members.length;
-      setLevel1Page({
-        offset: newOffset,
-        total: Number(total),
-        hasMore: newOffset < Number(total)
-      });
+      setLevel1Page({ offset: newOffset, total: Number(total), hasMore: newOffset < Number(total) });
 
-      // 获取2代（1代的直推）- 限制并发数量
-      const level2Results = [];
-      const batchSize = 5; // 每批并发请求数
-      for (let i = 0; i < level1Members.length; i += batchSize) {
-        const batch = level1Members.slice(i, i + batchSize);
-        const batchResults = await Promise.all(
-          batch.map(async (member) => {
-            try {
-              // 只获取前10个下级
-              const { result: subs } = await contracts.lpMining.getReferralsPaginated(member, 0, 10);
-              return { parent: member, members: subs };
-            } catch {
-              return { parent: member, members: [] };
-            }
-          })
-        );
-        level2Results.push(...batchResults);
-      }
-
-      // 获取3代（2代的直推）- 同样限制
-      const level3Results = [];
-      const allLevel2Members = level2Results.flatMap(r => r.members.map(m => ({ member: m, parent: r.parent })));
-
-      for (let i = 0; i < allLevel2Members.length; i += batchSize) {
-        const batch = allLevel2Members.slice(i, i + batchSize);
-        const batchResults = await Promise.all(
-          batch.map(async ({ member, parent }) => {
-            try {
-              // 只获取前5个下级
-              const { result: subs } = await contracts.lpMining.getReferralsPaginated(member, 0, 5);
-              return { parent: member, grandParent: parent, members: subs };
-            } catch {
-              return { parent: member, grandParent: parent, members: [] };
-            }
-          })
-        );
-        level3Results.push(...batchResults);
-      }
-
-      // 整理数据
       const level1 = level1Members.map(addr => ({ address: addr }));
-      const level2 = [];
-      level2Results.forEach(r => {
-        r.members.forEach(m => {
-          level2.push({ address: m, parent: r.parent });
-        });
-      });
-      const level3 = [];
-      level3Results.forEach(r => {
-        r.members.forEach(m => {
-          level3.push({ address: m, parent: r.parent, grandParent: r.grandParent });
-        });
-      });
+      newLevels.push(level1);
+      setLoadingProgress(1);
 
-      // 如果是重置则替换，否则追加
+      // 逐层获取 2~MAX_LEVELS 代
+      let prevLevelMembers = level1Members; // 上一层的地址列表
+
+      for (let lvl = 2; lvl <= MAX_LEVELS; lvl++) {
+        if (prevLevelMembers.length === 0) break;
+
+        const pageSize = getPageSizeForLevel(lvl);
+        const currentLevelMembers = [];
+
+        // 分批并发请求
+        for (let i = 0; i < prevLevelMembers.length; i += batchSize) {
+          const batch = prevLevelMembers.slice(i, i + batchSize);
+          const batchResults = await Promise.all(
+            batch.map(async (parentAddr) => {
+              try {
+                const { result: subs } = await contracts.lpMining.getReferralsPaginated(parentAddr, 0, pageSize);
+                return subs.map(addr => ({ address: addr, parent: parentAddr }));
+              } catch {
+                return [];
+              }
+            })
+          );
+          currentLevelMembers.push(...batchResults.flat());
+        }
+
+        newLevels.push(currentLevelMembers);
+        setLoadingProgress(lvl);
+
+        // 下一层的输入是当前层的所有地址
+        prevLevelMembers = currentLevelMembers.map(m => m.address);
+
+        // 如果当前层没数据，后续层也不会有
+        if (currentLevelMembers.length === 0) break;
+      }
+
       if (reset) {
-        setTeamData({ level1, level2, level3 });
+        setTeamLevels(newLevels);
       } else {
-        setTeamData(prev => ({
-          level1: [...prev.level1, ...level1],
-          level2: [...prev.level2, ...level2],
-          level3: [...prev.level3, ...level3],
-        }));
+        setTeamLevels(prev => {
+          const merged = [...prev];
+          // 追加1代数据
+          if (merged.length > 0) {
+            merged[0] = [...merged[0], ...newLevels[0]];
+          } else {
+            merged.push(newLevels[0]);
+          }
+          // 2代及以后替换（因为是基于新1代成员重新获取的）
+          for (let i = 1; i < newLevels.length; i++) {
+            if (i < merged.length) {
+              merged[i] = [...merged[i], ...newLevels[i]];
+            } else {
+              merged.push(newLevels[i]);
+            }
+          }
+          return merged;
+        });
       }
     } catch (err) {
       console.error('Fetch team members error:', err);
@@ -130,7 +148,7 @@ export default function ReferralPage({
     }
   }, [contracts?.lpMining, account, level1Page.offset]);
 
-  // 加载更多
+  // 加载更多（1代分页）
   const loadMore = () => {
     if (!loadingTeam && level1Page.hasMore) {
       fetchTeamMembers(false);
@@ -141,7 +159,7 @@ export default function ReferralPage({
   useEffect(() => {
     if (contracts?.lpMining && account) {
       setLevel1Page({ offset: 0, total: 0, hasMore: true });
-      setTeamData({ level1: [], level2: [], level3: [] });
+      setTeamLevels([]);
       fetchTeamMembers(true);
     }
   }, [contracts?.lpMining, account]);
@@ -149,35 +167,33 @@ export default function ReferralPage({
   // 刷新按钮
   const handleRefreshTeam = () => {
     setLevel1Page({ offset: 0, total: 0, hasMore: true });
-    setTeamData({ level1: [], level2: [], level3: [] });
+    setTeamLevels([]);
     fetchTeamMembers(true);
   };
 
   // 切换成员展开状态
   const toggleExpand = (address) => {
-    setExpandedMembers(prev => ({
-      ...prev,
-      [address]: !prev[address]
-    }));
+    setExpandedMembers(prev => ({ ...prev, [address]: !prev[address] }));
   };
 
-  // 获取某个成员的下级
+  // 获取某个成员在下一层的子成员
   const getSubMembers = (address, level) => {
-    if (level === 1) {
-      return teamData.level2.filter(m => m.parent === address);
-    } else if (level === 2) {
-      return teamData.level3.filter(m => m.parent === address);
-    }
-    return [];
+    // level是当前成员所在层级(1-based)，子成员在level+1层
+    const nextLevelIndex = level; // teamLevels[level] 就是 level+1 代
+    if (nextLevelIndex >= teamLevels.length) return [];
+    return teamLevels[nextLevelIndex].filter(m => m.parent === address);
   };
 
   // 统计数据
   const teamStats = {
-    total: teamData.level1.length + teamData.level2.length + teamData.level3.length,
-    level1: teamData.level1.length,
-    level2: teamData.level2.length,
-    level3: teamData.level3.length,
+    total: teamLevels.reduce((sum, level) => sum + level.length, 0),
+    levels: teamLevels.map(level => level.length),
   };
+
+  // 有数据的层级列表
+  const activeLevelsWithData = teamLevels
+    .map((level, index) => ({ level: index + 1, count: level.length }))
+    .filter(l => l.count > 0);
 
   // 复制推荐链接
   const copyReferralLink = async () => {
@@ -186,7 +202,6 @@ export default function ReferralPage({
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(link);
       } else {
-        // fallback: 兼容 DApp 浏览器和不支持 clipboard API 的环境
         const textArea = document.createElement('textarea');
         textArea.value = link;
         textArea.style.position = 'fixed';
@@ -203,7 +218,6 @@ export default function ReferralPage({
       toast.success(t('toast.referralLinkCopied'));
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      // clipboard API 失败时使用 fallback
       try {
         const textArea = document.createElement('textarea');
         textArea.value = link;
@@ -244,7 +258,6 @@ export default function ReferralPage({
     try {
       const bindPromises = [];
 
-      // LP Mining 绑定
       if (contracts?.lpMining) {
         try {
           const hasRef = await contracts.lpMining.hasReferrer(account);
@@ -259,7 +272,6 @@ export default function ReferralPage({
         } catch {}
       }
 
-      // Token Mining V3 绑定
       if (contracts?.tokenMiningV3) {
         try {
           const hasRef = await contracts.tokenMiningV3.hasReferrer(account);
@@ -277,7 +289,11 @@ export default function ReferralPage({
       if (bindPromises.length === 0) {
         toast.success(t('toast.bindSuccess'));
       } else {
-        toast.loading(t('toast.settingReferrer'), { id: 'setReferrer' });
+        if (bindPromises.length === 2) {
+          toast.loading(t('toast.bindNeedTwoTx'), { id: 'setReferrer' });
+        } else {
+          toast.loading(t('toast.settingReferrer'), { id: 'setReferrer' });
+        }
         const results = await Promise.allSettled(bindPromises);
         const resolvedResults = results.map(r => r.status === 'fulfilled' ? r.value : { success: false });
         const anySuccess = resolvedResults.some(r => r.success);
@@ -336,6 +352,114 @@ export default function ReferralPage({
   const v3HasReferrer = tokenMiningV3Data?.userInfo?.referrer && tokenMiningV3Data.userInfo.referrer !== ethers.ZeroAddress;
   const hasAnyReferrer = hasReferrer || v3HasReferrer;
   const displayedReferrer = hasReferrer ? userInfo.referrer : (v3HasReferrer ? tokenMiningV3Data.userInfo.referrer : null);
+
+  // 递归树形成员行组件
+  const TeamMemberRow = ({ member, level, maxExpandLevel }) => {
+    const color = getLevelColor(level);
+    const subMembers = getSubMembers(member.address, level);
+    const hasSubMembers = subMembers.length > 0;
+    const isExpanded = expandedMembers[member.address];
+    const canExpand = level < maxExpandLevel;
+
+    return (
+      <div className="space-y-2">
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          className={`flex items-center justify-between p-3 sm:p-4 rounded-xl bg-white/5 border border-white/5 ${hasSubMembers && canExpand ? 'cursor-pointer ' + color.hover : ''} transition-colors`}
+          onClick={() => hasSubMembers && canExpand && toggleExpand(member.address)}
+        >
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {hasSubMembers && canExpand ? (
+              <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} className="text-white/40 flex-shrink-0">
+                <FiChevronRight className="w-4 h-4" />
+              </motion.div>
+            ) : (
+              <div className="w-4 flex-shrink-0" />
+            )}
+            <div
+              className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br ${color.gradient} flex items-center justify-center text-[#0B1120] text-xs font-bold flex-shrink-0`}
+              style={color.custom ? { background: `linear-gradient(135deg, ${color.custom.color1}, ${color.custom.color2})` } : undefined}
+            >
+              {level}
+            </div>
+            <span className="font-mono text-white text-sm truncate">{formatAddress(member.address)}</span>
+            {hasSubMembers && (
+              <span className={`px-2 py-0.5 rounded-full text-xs ${color.bg}/20 ${color.text} flex-shrink-0`}
+                style={{ backgroundColor: color.custom ? `${color.custom.color1}20` : undefined, color: color.custom ? color.custom.color1 : undefined }}
+              >
+                +{subMembers.length}
+              </span>
+            )}
+          </div>
+          <a
+            href={`https://bscscan.com/address/${member.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex items-center gap-1 ${color.text} transition-colors flex-shrink-0`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-sm hidden sm:inline">{t('referral.view')}</span>
+            <FiExternalLink className="w-4 h-4" />
+          </a>
+        </motion.div>
+
+        {/* 递归子成员 */}
+        <AnimatePresence>
+          {isExpanded && canExpand && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="pl-4 sm:pl-8 space-y-2"
+            >
+              {subMembers.map((sub) => (
+                <TeamMemberRow key={sub.address} member={sub} level={level + 1} maxExpandLevel={maxExpandLevel} />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
+  // 平铺视图成员行
+  const FlatMemberRow = ({ member, level }) => {
+    const color = getLevelColor(level);
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        className={`flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 ${color.hover} transition-colors`}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className={`w-8 h-8 rounded-full bg-gradient-to-br ${color.gradient} flex items-center justify-center text-[#0B1120] text-xs font-bold flex-shrink-0`}
+            style={color.custom ? { background: `linear-gradient(135deg, ${color.custom.color1}, ${color.custom.color2})` } : undefined}
+          >
+            {level}
+          </div>
+          <div className="min-w-0">
+            <span className="font-mono text-white truncate block">{formatAddress(member.address)}</span>
+            {member.parent && (
+              <div className="text-xs text-white/40">
+                {t('referral.superior')}: {formatAddress(member.parent)}
+              </div>
+            )}
+          </div>
+        </div>
+        <a
+          href={`https://bscscan.com/address/${member.address}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`flex items-center gap-1 ${color.text} transition-colors flex-shrink-0`}
+        >
+          <span className="text-sm hidden sm:inline">{t('referral.view')}</span>
+          <FiExternalLink className="w-4 h-4" />
+        </a>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -459,6 +583,7 @@ export default function ReferralPage({
                     <div className="text-sm text-white/70">
                       <p className="font-medium text-[#00D9A5] mb-1">{t('referral.referrerTip')}</p>
                       <p className="text-white/50">{t('referral.referrerTipDesc')}</p>
+                      <p className="text-white/50 mt-1">{t('referral.bindTwoTxTip')}</p>
                     </div>
                   </div>
                 </div>
@@ -621,7 +746,7 @@ export default function ReferralPage({
             <FiUsers className="text-[#00D9A5]" />
             {t('referral.myTeam')}
             <span className="text-sm font-normal text-white/40 ml-2">
-              {t('referral.total')} {level1Page.total > 0 ? level1Page.total : teamStats.level1} {t('referral.personL1')}
+              {t('referral.total')} {teamStats.total} {t('referral.personTotal')}
             </span>
           </h2>
           <button
@@ -634,59 +759,100 @@ export default function ReferralPage({
           </button>
         </div>
 
-        {/* Level Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {[
-            { id: 'all', label: t('referral.all'), count: teamStats.total },
-            { id: '1', label: t('referral.level1'), count: teamStats.level1, color: 'from-[#00D9A5] to-[#00B88A]' },
-            { id: '2', label: t('referral.level2'), count: teamStats.level2, color: 'from-[#FFB800] to-[#FF8A00]' },
-            { id: '3', label: t('referral.level3'), count: teamStats.level3, color: 'from-[#FF6B6B] to-[#FF8A00]' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveLevel(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all ${
-                activeLevel === tab.id
-                  ? 'bg-white/10 text-white border border-white/20'
-                  : 'text-white/50 hover:text-white/70 hover:bg-white/5'
-              }`}
-            >
-              {tab.label}
-              <span className={`px-2 py-0.5 rounded-full text-xs ${
-                activeLevel === tab.id ? 'bg-[#00D9A5]/20 text-[#00D9A5]' : 'bg-white/10 text-white/50'
-              }`}>
-                {tab.count}
-              </span>
-            </button>
-          ))}
+        {/* Level Tabs - 动态生成 */}
+        <div className="flex flex-wrap gap-2 mb-6 overflow-x-auto">
+          <button
+            onClick={() => setActiveLevel('all')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all flex-shrink-0 ${
+              activeLevel === 'all'
+                ? 'bg-white/10 text-white border border-white/20'
+                : 'text-white/50 hover:text-white/70 hover:bg-white/5'
+            }`}
+          >
+            {t('referral.all')}
+            <span className={`px-2 py-0.5 rounded-full text-xs ${
+              activeLevel === 'all' ? 'bg-[#00D9A5]/20 text-[#00D9A5]' : 'bg-white/10 text-white/50'
+            }`}>
+              {teamStats.total}
+            </span>
+          </button>
+          {activeLevelsWithData.map(({ level, count }) => {
+            const color = getLevelColor(level);
+            return (
+              <button
+                key={level}
+                onClick={() => setActiveLevel(String(level))}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all flex-shrink-0 ${
+                  activeLevel === String(level)
+                    ? 'bg-white/10 text-white border border-white/20'
+                    : 'text-white/50 hover:text-white/70 hover:bg-white/5'
+                }`}
+              >
+                {getLevelName(level)}
+                <span className={`px-2 py-0.5 rounded-full text-xs ${
+                  activeLevel === String(level) ? 'bg-[#00D9A5]/20 text-[#00D9A5]' : 'bg-white/10 text-white/50'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Level Stats Cards */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
-          <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-[#00D9A5]/10 to-[#00D9A5]/5 border border-[#00D9A5]/20">
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
-              <div className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gradient-to-r from-[#00D9A5] to-[#00B88A] flex items-center justify-center text-[#0B1120] text-xs font-bold">1</div>
-              <span className="text-white/60 text-xs sm:text-sm">{t('referral.level1Members')}</span>
-            </div>
-            <div className="text-xl sm:text-2xl font-bold text-[#00D9A5]">{teamStats.level1}</div>
-            <div className="text-xs text-white/40 hidden sm:block">{t('referral.level1Rate')}</div>
-          </div>
-          <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-[#FFB800]/10 to-[#FFB800]/5 border border-[#FFB800]/20">
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
-              <div className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gradient-to-r from-[#FFB800] to-[#FF8A00] flex items-center justify-center text-[#0B1120] text-xs font-bold">2</div>
-              <span className="text-white/60 text-xs sm:text-sm">{t('referral.level2Members')}</span>
-            </div>
-            <div className="text-xl sm:text-2xl font-bold text-[#FFB800]">{teamStats.level2}</div>
-            <div className="text-xs text-white/40 hidden sm:block">{t('referral.level2Rate')}</div>
-          </div>
-          <div className="p-3 sm:p-4 rounded-xl bg-gradient-to-br from-[#FF6B6B]/10 to-[#FF6B6B]/5 border border-[#FF6B6B]/20">
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
-              <div className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gradient-to-r from-[#FF6B6B] to-[#FF8A00] flex items-center justify-center text-[#0B1120] text-xs font-bold">3</div>
-              <span className="text-white/60 text-xs sm:text-sm">{t('referral.level3Members')}</span>
-            </div>
-            <div className="text-xl sm:text-2xl font-bold text-[#FF6B6B]">{teamStats.level3}</div>
-            <div className="text-xs text-white/40 hidden sm:block">{t('referral.level3Rate')}</div>
-          </div>
+        {/* Level Stats Cards - 前5层分别显示，6-15层合并 */}
+        <div className="flex gap-2 sm:gap-4 mb-6 overflow-x-auto pb-2">
+          {teamLevels.slice(0, 5).map((levelMembers, index) => {
+            const level = index + 1;
+            const color = getLevelColor(level);
+            return (
+              <div
+                key={level}
+                className={`p-3 sm:p-4 rounded-xl min-w-[120px] flex-shrink-0 bg-gradient-to-br ${level <= 3 ? (
+                  level === 1 ? 'from-[#00D9A5]/10 to-[#00D9A5]/5 border border-[#00D9A5]/20' :
+                  level === 2 ? 'from-[#FFB800]/10 to-[#FFB800]/5 border border-[#FFB800]/20' :
+                  'from-[#FF6B6B]/10 to-[#FF6B6B]/5 border border-[#FF6B6B]/20'
+                ) : 'from-purple-500/10 to-purple-500/5 border border-purple-500/20'}`}
+                style={color.custom ? {
+                  background: `linear-gradient(135deg, ${color.custom.color1}15, ${color.custom.color1}08)`,
+                  borderColor: `${color.custom.color1}30`,
+                } : undefined}
+              >
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
+                  <div
+                    className={`w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gradient-to-r ${color.gradient} flex items-center justify-center text-[#0B1120] text-xs font-bold`}
+                    style={color.custom ? { background: `linear-gradient(90deg, ${color.custom.color1}, ${color.custom.color2})` } : undefined}
+                  >
+                    {level}
+                  </div>
+                  <span className="text-white/60 text-xs sm:text-sm whitespace-nowrap">
+                    {getLevelName(level)}{language === 'zh' ? '会员' : ' Members'}
+                  </span>
+                </div>
+                <div className={`text-xl sm:text-2xl font-bold ${color.text}`}
+                  style={color.custom ? { color: color.custom.color1 } : undefined}
+                >
+                  {levelMembers.length}
+                </div>
+              </div>
+            );
+          })}
+          {/* 6-15层合并卡片 */}
+          {teamLevels.length > 5 && (() => {
+            const deeperCount = teamLevels.slice(5).reduce((sum, l) => sum + l.length, 0);
+            if (deeperCount === 0) return null;
+            return (
+              <div className="p-3 sm:p-4 rounded-xl min-w-[120px] flex-shrink-0 bg-gradient-to-br from-violet-500/10 to-violet-500/5 border border-violet-500/20">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
+                  <div className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 flex items-center justify-center text-[#0B1120] text-xs font-bold">
+                    +
+                  </div>
+                  <span className="text-white/60 text-xs sm:text-sm whitespace-nowrap">{t('referral.deeperLevels')}</span>
+                </div>
+                <div className="text-xl sm:text-2xl font-bold text-violet-400">{deeperCount}</div>
+                <div className="text-xs text-white/40">{language === 'zh' ? `6-${teamLevels.length}代` : `L6-L${teamLevels.length}`}</div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Loading State */}
@@ -694,6 +860,11 @@ export default function ReferralPage({
           <div className="text-center py-12">
             <div className="w-12 h-12 border-4 border-[#00D9A5]/30 border-t-[#00D9A5] rounded-full animate-spin mx-auto mb-4" />
             <p className="text-white/50">{t('referral.loadingTeam')}</p>
+            {loadingProgress > 0 && (
+              <p className="text-white/30 text-sm mt-2">
+                {language === 'zh' ? `已加载 ${loadingProgress} 层` : `Loaded ${loadingProgress} levels`}
+              </p>
+            )}
           </div>
         ) : teamStats.total === 0 ? (
           <div className="text-center py-12">
@@ -705,219 +876,25 @@ export default function ReferralPage({
           </div>
         ) : (
           <div className="space-y-2">
-            {/* Tree View - Level 1 */}
-            {(activeLevel === 'all' || activeLevel === '1') && teamData.level1.map((member, index) => {
-              const subMembers = getSubMembers(member.address, 1);
-              const hasSubMembers = subMembers.length > 0;
-              const isExpanded = expandedMembers[member.address];
-
-              return (
-                <div key={member.address} className="space-y-2">
-                  <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.03 }}
-                    className={`flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-[#00D9A5]/30 transition-colors ${hasSubMembers ? 'cursor-pointer' : ''}`}
-                    onClick={() => hasSubMembers && toggleExpand(member.address)}
-                  >
-                    <div className="flex items-center gap-3">
-                      {hasSubMembers ? (
-                        <motion.div
-                          animate={{ rotate: isExpanded ? 90 : 0 }}
-                          className="text-white/40"
-                        >
-                          <FiChevronRight className="w-4 h-4" />
-                        </motion.div>
-                      ) : (
-                        <div className="w-4" />
-                      )}
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00D9A5] to-[#00B88A] flex items-center justify-center text-[#0B1120] text-xs font-bold">
-                        1
-                      </div>
-                      <span className="font-mono text-white">{formatAddress(member.address)}</span>
-                      {hasSubMembers && (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-[#00D9A5]/20 text-[#00D9A5]">
-                          +{subMembers.length}
-                        </span>
-                      )}
-                    </div>
-                    <a
-                      href={`https://bscscan.com/address/${member.address}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[#00D9A5] hover:text-[#00FFB8] transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <span className="text-sm hidden sm:inline">{t('referral.view')}</span>
-                      <FiExternalLink className="w-4 h-4" />
-                    </a>
-                  </motion.div>
-
-                  {/* Level 2 Submembers */}
-                  <AnimatePresence>
-                    {isExpanded && (activeLevel === 'all' || activeLevel === '1') && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="pl-4 sm:pl-8 space-y-2"
-                      >
-                        {subMembers.map((sub, subIndex) => {
-                          const level3Members = getSubMembers(sub.address, 2);
-                          const hasLevel3 = level3Members.length > 0;
-                          const isSubExpanded = expandedMembers[sub.address];
-
-                          return (
-                            <div key={sub.address} className="space-y-2">
-                              <motion.div
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: subIndex * 0.02 }}
-                                className={`flex items-center justify-between p-3 rounded-xl bg-white/3 border border-white/5 hover:border-[#FFB800]/30 transition-colors ${hasLevel3 ? 'cursor-pointer' : ''}`}
-                                onClick={() => hasLevel3 && toggleExpand(sub.address)}
-                              >
-                                <div className="flex items-center gap-3">
-                                  {hasLevel3 ? (
-                                    <motion.div
-                                      animate={{ rotate: isSubExpanded ? 90 : 0 }}
-                                      className="text-white/40"
-                                    >
-                                      <FiChevronRight className="w-4 h-4" />
-                                    </motion.div>
-                                  ) : (
-                                    <div className="w-4" />
-                                  )}
-                                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FFB800] to-[#FF8A00] flex items-center justify-center text-[#0B1120] text-xs font-bold">
-                                    2
-                                  </div>
-                                  <span className="font-mono text-white/80 text-sm">{formatAddress(sub.address)}</span>
-                                  {hasLevel3 && (
-                                    <span className="px-2 py-0.5 rounded-full text-xs bg-[#FFB800]/20 text-[#FFB800]">
-                                      +{level3Members.length}
-                                    </span>
-                                  )}
-                                </div>
-                                <a
-                                  href={`https://bscscan.com/address/${sub.address}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-[#FFB800] hover:text-[#FFCC00] transition-colors"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <FiExternalLink className="w-4 h-4" />
-                                </a>
-                              </motion.div>
-
-                              {/* Level 3 Submembers */}
-                              <AnimatePresence>
-                                {isSubExpanded && (
-                                  <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="pl-4 sm:pl-8 space-y-2"
-                                  >
-                                    {level3Members.map((l3, l3Index) => (
-                                      <motion.div
-                                        key={l3.address}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: l3Index * 0.02 }}
-                                        className="flex items-center justify-between p-3 rounded-xl bg-white/2 border border-white/5 hover:border-[#FF6B6B]/30 transition-colors"
-                                      >
-                                        <div className="flex items-center gap-3">
-                                          <div className="w-4" />
-                                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF6B6B] to-[#FF8A00] flex items-center justify-center text-[#0B1120] text-xs font-bold">
-                                            3
-                                          </div>
-                                          <span className="font-mono text-white/60 text-sm">{formatAddress(l3.address)}</span>
-                                        </div>
-                                        <a
-                                          href={`https://bscscan.com/address/${l3.address}`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="flex items-center gap-1 text-[#FF6B6B] hover:text-[#FF8A8A] transition-colors"
-                                        >
-                                          <FiExternalLink className="w-4 h-4" />
-                                        </a>
-                                      </motion.div>
-                                    ))}
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                          );
-                        })}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              );
-            })}
-
-            {/* Flat View - Level 2 Only */}
-            {activeLevel === '2' && teamData.level2.map((member, index) => (
-              <motion.div
+            {/* Tree View - 全部层级 */}
+            {activeLevel === 'all' && teamLevels.length > 0 && teamLevels[0].map((member) => (
+              <TeamMemberRow
                 key={member.address}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.03 }}
-                className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-[#FFB800]/30 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FFB800] to-[#FF8A00] flex items-center justify-center text-[#0B1120] text-xs font-bold">
-                    2
-                  </div>
-                  <div>
-                    <span className="font-mono text-white">{formatAddress(member.address)}</span>
-                    <div className="text-xs text-white/40">
-                      {t('referral.superior')}: {formatAddress(member.parent)}
-                    </div>
-                  </div>
-                </div>
-                <a
-                  href={`https://bscscan.com/address/${member.address}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[#FFB800] hover:text-[#FFCC00] transition-colors"
-                >
-                  <span className="text-sm hidden sm:inline">{t('referral.view')}</span>
-                  <FiExternalLink className="w-4 h-4" />
-                </a>
-              </motion.div>
+                member={member}
+                level={1}
+                maxExpandLevel={teamLevels.length}
+              />
             ))}
 
-            {/* Flat View - Level 3 Only */}
-            {activeLevel === '3' && teamData.level3.map((member, index) => (
-              <motion.div
-                key={member.address}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.03 }}
-                className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-[#FF6B6B]/30 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF6B6B] to-[#FF8A00] flex items-center justify-center text-[#0B1120] text-xs font-bold">
-                    3
-                  </div>
-                  <div>
-                    <span className="font-mono text-white">{formatAddress(member.address)}</span>
-                    <div className="text-xs text-white/40">
-                      {t('referral.superior')}: {formatAddress(member.parent)} | {t('referral.grandSuperior')}: {formatAddress(member.grandParent)}
-                    </div>
-                  </div>
-                </div>
-                <a
-                  href={`https://bscscan.com/address/${member.address}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[#FF6B6B] hover:text-[#FF8A8A] transition-colors"
-                >
-                  <span className="text-sm hidden sm:inline">{t('referral.view')}</span>
-                  <FiExternalLink className="w-4 h-4" />
-                </a>
-              </motion.div>
-            ))}
+            {/* Flat View - 特定层级 */}
+            {activeLevel !== 'all' && (() => {
+              const levelNum = parseInt(activeLevel);
+              const levelIndex = levelNum - 1;
+              if (levelIndex >= teamLevels.length) return null;
+              return teamLevels[levelIndex].map((member) => (
+                <FlatMemberRow key={member.address} member={member} level={levelNum} />
+              ));
+            })()}
 
             {/* Load More Button */}
             {activeLevel === 'all' && level1Page.hasMore && (
@@ -927,7 +904,7 @@ export default function ReferralPage({
                   disabled={loadingTeam}
                   className="px-6 py-2 rounded-xl bg-white/10 text-white/70 hover:bg-white/20 transition-colors disabled:opacity-50"
                 >
-                  {loadingTeam ? t('common.loading') : `${t('referral.loadMore')} (${teamStats.level1}/${level1Page.total})`}
+                  {loadingTeam ? t('common.loading') : `${t('referral.loadMore')} (${teamStats.levels[0] || 0}/${level1Page.total})`}
                 </button>
               </div>
             )}

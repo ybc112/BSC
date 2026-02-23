@@ -217,7 +217,11 @@ function App() {
       if (bindPromises.length === 0) {
         toast.success(t('toast.bindSuccess'));
       } else {
-        toast.loading(t('toast.bindingReferrer'), { id: 'bindRef' });
+        if (bindPromises.length === 2) {
+          toast.loading(t('toast.bindNeedTwoTx'), { id: 'bindRef' });
+        } else {
+          toast.loading(t('toast.bindingReferrer'), { id: 'bindRef' });
+        }
         const results = await Promise.allSettled(bindPromises);
         const resolvedResults = results.map(r => r.status === 'fulfilled' ? r.value : { success: false });
         const allSuccess = resolvedResults.every(r => r.success);
@@ -368,6 +372,9 @@ function App() {
                 <p className="text-sm text-white/70">
                   {t('app.bindReferrerDesc')}
                   <span className="text-[#00D9A5] font-medium">{t('app.irreversible')}</span>{t('app.confirmCorrect')}
+                </p>
+                <p className="text-sm text-white/50 mt-2">
+                  {t('app.bindTwoTxNote')}
                 </p>
               </div>
 
