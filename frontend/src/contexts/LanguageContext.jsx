@@ -407,7 +407,7 @@ const translations = {
       cancel: '取消',
       binding: '绑定中...',
       confirmBind: '确认绑定',
-      bindTwoTxNote: '绑定推荐人需要确认2笔交易（LP挖矿和代币挖矿各1笔），请依次在钱包中确认。',
+      bindTwoTxNote: '绑定推荐人需要在钱包中确认1笔交易。',
     },
     // Common
     common: {
@@ -448,7 +448,7 @@ const translations = {
       referralLinkCopied: '推荐链接已复制',
       settingReferrer: '设置推荐人中...',
       setReferrerSuccess: '推荐人设置成功',
-      bindNeedTwoTx: '需要确认2笔交易，请依次确认...',
+      bindNeedTwoTx: '请在钱包中确认交易...',
       invalidAddress: '无效的地址格式',
       claimingReferral: '领取推荐奖励中...',
       claimingTeam: '领取团队奖励中...',
@@ -895,7 +895,7 @@ const translations = {
       cancel: 'Cancel',
       binding: 'Binding...',
       confirmBind: 'Confirm Bind',
-      bindTwoTxNote: 'Binding a referrer requires confirming 2 transactions (1 for LP Mining and 1 for Token Mining). Please confirm each in your wallet.',
+      bindTwoTxNote: 'Binding a referrer requires confirming 1 transaction in your wallet.',
     },
     // Common
     common: {
@@ -936,7 +936,7 @@ const translations = {
       referralLinkCopied: 'Referral link copied',
       settingReferrer: 'Setting referrer...',
       setReferrerSuccess: 'Referrer set successfully',
-      bindNeedTwoTx: '2 transactions required, please confirm each...',
+      bindNeedTwoTx: 'Please confirm the transaction in your wallet...',
       invalidAddress: 'Invalid address format',
       claimingReferral: 'Claiming referral rewards...',
       claimingTeam: 'Claiming team rewards...',

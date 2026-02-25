@@ -239,10 +239,10 @@ export default function ReferralPage({
     }
   };
 
-  // 设置推荐人（同时绑定 LP Mining 和 Token Mining V3）
+  // 设置推荐人（仅绑定 Token Mining V3）
   const handleSetReferrer = async () => {
     if (!referrerAddress) return;
-    if (!contracts?.lpMining && !contracts?.tokenMiningV3) return;
+    if (!contracts?.tokenMiningV3) return;
 
     if (!ethers.isAddress(referrerAddress)) {
       toast.error(t('toast.invalidAddress'));
@@ -256,53 +256,18 @@ export default function ReferralPage({
 
     setIsSettingReferrer(true);
     try {
-      const bindPromises = [];
+      let hasRef = true;
+      try {
+        hasRef = await contracts.tokenMiningV3.hasReferrer(account);
+      } catch {}
 
-      if (contracts?.lpMining) {
-        try {
-          const hasRef = await contracts.lpMining.hasReferrer(account);
-          if (!hasRef) {
-            bindPromises.push(
-              contracts.lpMining.setReferrer(referrerAddress)
-                .then(tx => tx.wait())
-                .then(() => ({ contract: 'LP Mining', success: true }))
-                .catch(err => ({ contract: 'LP Mining', success: false, error: err }))
-            );
-          }
-        } catch {}
-      }
-
-      if (contracts?.tokenMiningV3) {
-        try {
-          const hasRef = await contracts.tokenMiningV3.hasReferrer(account);
-          if (!hasRef) {
-            bindPromises.push(
-              contracts.tokenMiningV3.setReferrer(referrerAddress)
-                .then(tx => tx.wait())
-                .then(() => ({ contract: 'Token Mining V3', success: true }))
-                .catch(err => ({ contract: 'Token Mining V3', success: false, error: err }))
-            );
-          }
-        } catch {}
-      }
-
-      if (bindPromises.length === 0) {
+      if (hasRef) {
         toast.success(t('toast.bindSuccess'));
       } else {
-        if (bindPromises.length === 2) {
-          toast.loading(t('toast.bindNeedTwoTx'), { id: 'setReferrer' });
-        } else {
-          toast.loading(t('toast.settingReferrer'), { id: 'setReferrer' });
-        }
-        const results = await Promise.allSettled(bindPromises);
-        const resolvedResults = results.map(r => r.status === 'fulfilled' ? r.value : { success: false });
-        const anySuccess = resolvedResults.some(r => r.success);
-
-        if (anySuccess) {
-          toast.success(t('toast.setReferrerSuccess'), { id: 'setReferrer' });
-        } else {
-          toast.error(t('toast.bindFailed'), { id: 'setReferrer' });
-        }
+        toast.loading(t('toast.settingReferrer'), { id: 'setReferrer' });
+        const tx = await contracts.tokenMiningV3.setReferrer(referrerAddress);
+        await tx.wait();
+        toast.success(t('toast.setReferrerSuccess'), { id: 'setReferrer' });
       }
 
       setReferrerAddress('');
@@ -348,10 +313,10 @@ export default function ReferralPage({
     }
   };
 
-  const hasReferrer = userInfo?.referrer && userInfo.referrer !== ethers.ZeroAddress;
   const v3HasReferrer = tokenMiningV3Data?.userInfo?.referrer && tokenMiningV3Data.userInfo.referrer !== ethers.ZeroAddress;
-  const hasAnyReferrer = hasReferrer || v3HasReferrer;
-  const displayedReferrer = hasReferrer ? userInfo.referrer : (v3HasReferrer ? tokenMiningV3Data.userInfo.referrer : null);
+  const hasReferrer = userInfo?.referrer && userInfo.referrer !== ethers.ZeroAddress;
+  const hasAnyReferrer = v3HasReferrer || hasReferrer;
+  const displayedReferrer = v3HasReferrer ? tokenMiningV3Data.userInfo.referrer : (hasReferrer ? userInfo.referrer : null);
 
   // 递归树形成员行组件
   const TeamMemberRow = ({ member, level, maxExpandLevel }) => {

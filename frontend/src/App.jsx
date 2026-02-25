@@ -127,12 +127,11 @@ function App() {
     }
   }, []);
 
-  // 自动绑定推荐人 - 改为显示确认弹窗（同时检查LP Mining和Token Mining V3）
+  // 自动绑定推荐人 - 显示确认弹窗（仅检查 Token Mining V3）
   useEffect(() => {
     const checkReferrer = async () => {
       if (!account || !pendingReferrer) return;
-      // 至少需要一个合约可用
-      if (!contracts?.lpMining && !contracts?.tokenMiningV3) return;
+      if (!contracts?.tokenMiningV3) return;
 
       try {
         // 检查推荐人是否有效（不是自己）
@@ -143,29 +142,20 @@ function App() {
           return;
         }
 
-        // 检查两个合约是否都已有推荐人
-        let lpHasRef = true;
+        // 检查是否已有推荐人
         let v3HasRef = true;
+        try {
+          v3HasRef = await contracts.tokenMiningV3.hasReferrer(account);
+        } catch { v3HasRef = true; }
 
-        if (contracts?.lpMining) {
-          try {
-            lpHasRef = await contracts.lpMining.hasReferrer(account);
-          } catch { lpHasRef = true; }
-        }
-        if (contracts?.tokenMiningV3) {
-          try {
-            v3HasRef = await contracts.tokenMiningV3.hasReferrer(account);
-          } catch { v3HasRef = true; }
-        }
-
-        if (lpHasRef && v3HasRef) {
-          // 两个合约都已有推荐人，清除待绑定状态
+        if (v3HasRef) {
+          // 已有推荐人，清除待绑定状态
           localStorage.removeItem('referrer');
           setPendingReferrer(null);
           return;
         }
 
-        // 至少一个合约未绑定，显示确认弹窗
+        // 未绑定，显示确认弹窗
         setShowReferrerModal(true);
       } catch (err) {
         console.error('Check referrer error:', err);
@@ -173,67 +163,27 @@ function App() {
     };
 
     checkReferrer();
-  }, [account, contracts?.lpMining, contracts?.tokenMiningV3, pendingReferrer]);
+  }, [account, contracts?.tokenMiningV3, pendingReferrer]);
 
-  // 确认绑定推荐人（同时绑定LP Mining和Token Mining V3）
+  // 确认绑定推荐人（仅绑定 Token Mining V3）
   const handleConfirmBind = async () => {
     if (!pendingReferrer) return;
-    if (!contracts?.lpMining && !contracts?.tokenMiningV3) return;
+    if (!contracts?.tokenMiningV3) return;
 
     setIsBindingReferrer(true);
     try {
-      const bindPromises = [];
+      let hasRef = true;
+      try {
+        hasRef = await contracts.tokenMiningV3.hasReferrer(account);
+      } catch {}
 
-      // LP Mining 绑定
-      if (contracts?.lpMining) {
-        try {
-          const hasRef = await contracts.lpMining.hasReferrer(account);
-          if (!hasRef) {
-            bindPromises.push(
-              contracts.lpMining.setReferrer(pendingReferrer)
-                .then(tx => tx.wait())
-                .then(() => ({ contract: 'LP Mining', success: true }))
-                .catch(err => ({ contract: 'LP Mining', success: false, error: err }))
-            );
-          }
-        } catch {}
-      }
-
-      // Token Mining V3 绑定
-      if (contracts?.tokenMiningV3) {
-        try {
-          const hasRef = await contracts.tokenMiningV3.hasReferrer(account);
-          if (!hasRef) {
-            bindPromises.push(
-              contracts.tokenMiningV3.setReferrer(pendingReferrer)
-                .then(tx => tx.wait())
-                .then(() => ({ contract: 'Token Mining V3', success: true }))
-                .catch(err => ({ contract: 'Token Mining V3', success: false, error: err }))
-            );
-          }
-        } catch {}
-      }
-
-      if (bindPromises.length === 0) {
+      if (hasRef) {
         toast.success(t('toast.bindSuccess'));
       } else {
-        if (bindPromises.length === 2) {
-          toast.loading(t('toast.bindNeedTwoTx'), { id: 'bindRef' });
-        } else {
-          toast.loading(t('toast.bindingReferrer'), { id: 'bindRef' });
-        }
-        const results = await Promise.allSettled(bindPromises);
-        const resolvedResults = results.map(r => r.status === 'fulfilled' ? r.value : { success: false });
-        const allSuccess = resolvedResults.every(r => r.success);
-        const anySuccess = resolvedResults.some(r => r.success);
-
-        if (allSuccess) {
-          toast.success(t('toast.bindSuccess'), { id: 'bindRef' });
-        } else if (anySuccess) {
-          toast.success(t('toast.bindSuccess'), { id: 'bindRef' });
-        } else {
-          toast.error(t('toast.bindFailed'), { id: 'bindRef' });
-        }
+        toast.loading(t('toast.bindingReferrer'), { id: 'bindRef' });
+        const tx = await contracts.tokenMiningV3.setReferrer(pendingReferrer);
+        await tx.wait();
+        toast.success(t('toast.bindSuccess'), { id: 'bindRef' });
       }
 
       // 清除推荐人缓存
@@ -372,9 +322,6 @@ function App() {
                 <p className="text-sm text-white/70">
                   {t('app.bindReferrerDesc')}
                   <span className="text-[#00D9A5] font-medium">{t('app.irreversible')}</span>{t('app.confirmCorrect')}
-                </p>
-                <p className="text-sm text-white/50 mt-2">
-                  {t('app.bindTwoTxNote')}
                 </p>
               </div>
 
