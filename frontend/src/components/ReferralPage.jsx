@@ -548,7 +548,6 @@ export default function ReferralPage({
                     <div className="text-sm text-white/70">
                       <p className="font-medium text-[#00D9A5] mb-1">{t('referral.referrerTip')}</p>
                       <p className="text-white/50">{t('referral.referrerTipDesc')}</p>
-                      <p className="text-white/50 mt-1">{t('referral.bindTwoTxTip')}</p>
                     </div>
                   </div>
                 </div>
