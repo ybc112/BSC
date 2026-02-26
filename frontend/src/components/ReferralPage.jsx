@@ -63,7 +63,7 @@ export default function ReferralPage({
 
   // 使用分页方式获取多层级团队成员（前3层自动加载，4+层需展开触发）
   const fetchTeamMembers = useCallback(async (reset = false) => {
-    if (!contracts?.lpMining || !account) return;
+    if (!contracts?.tokenMiningV3 || !account) return;
 
     setLoadingTeam(true);
     setLoadingProgress(0);
@@ -73,7 +73,7 @@ export default function ReferralPage({
 
       // 获取1代（直推）
       const offset = reset ? 0 : level1Page.offset;
-      const { result: level1Members, total } = await contracts.lpMining.getReferralsPaginated(
+      const { result: level1Members, total } = await contracts.tokenMiningV3.getReferralsPaginated(
         account, offset, PAGE_SIZE
       );
 
@@ -99,7 +99,7 @@ export default function ReferralPage({
           const batchResults = await Promise.all(
             batch.map(async (parentAddr) => {
               try {
-                const { result: subs } = await contracts.lpMining.getReferralsPaginated(parentAddr, 0, pageSize);
+                const { result: subs } = await contracts.tokenMiningV3.getReferralsPaginated(parentAddr, 0, pageSize);
                 return subs.map(addr => ({ address: addr, parent: parentAddr }));
               } catch {
                 return [];
@@ -146,7 +146,7 @@ export default function ReferralPage({
     } finally {
       setLoadingTeam(false);
     }
-  }, [contracts?.lpMining, account, level1Page.offset]);
+  }, [contracts?.tokenMiningV3, account, level1Page.offset]);
 
   // 加载更多（1代分页）
   const loadMore = () => {
@@ -157,12 +157,12 @@ export default function ReferralPage({
 
   // 初始加载团队数据
   useEffect(() => {
-    if (contracts?.lpMining && account) {
+    if (contracts?.tokenMiningV3 && account) {
       setLevel1Page({ offset: 0, total: 0, hasMore: true });
       setTeamLevels([]);
       fetchTeamMembers(true);
     }
-  }, [contracts?.lpMining, account]);
+  }, [contracts?.tokenMiningV3, account]);
 
   // 刷新按钮
   const handleRefreshTeam = () => {
@@ -480,7 +480,7 @@ export default function ReferralPage({
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: t('referral.directReferrals'), value: (userInfo?.referralCount || 0) + (tokenMiningV3Data?.userInfo?.directReferrals || 0) > 0 ? Math.max(userInfo?.referralCount || 0, tokenMiningV3Data?.userInfo?.directReferrals || 0) : 0, suffix: t('referral.person'), icon: <FiUserPlus className="w-5 h-5" />, color: 'primary' },
+          { label: t('referral.directReferrals'), value: tokenMiningV3Data?.userInfo?.directReferrals || userInfo?.referralCount || 0, suffix: t('referral.person'), icon: <FiUserPlus className="w-5 h-5" />, color: 'primary' },
           { label: t('referral.teamPerformance'), value: userInfo?.teamPerformance, suffix: 'LP', icon: <FiLayers className="w-5 h-5" />, color: 'gold' },
           { label: t('referral.smallAreaPerformance'), value: userInfo?.smallAreaPerformance, suffix: 'LP', icon: <FiTarget className="w-5 h-5" />, color: 'primary' },
           { label: t('referral.teamLevel'), value: `${userInfo?.teamLevel || 0} ${t('referral.level')}`, suffix: '', icon: <FiAward className="w-5 h-5" />, color: 'gold', highlight: true },
